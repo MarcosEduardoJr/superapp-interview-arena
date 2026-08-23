@@ -1019,22 +1019,41 @@ const MODULES = [
   subtitle:'DI é o que mantém o SuperApp testável e desacoplado entre módulos. O entrevistador quer ver que você entende os trade-offs entre codegen e service locator.',
   xp:55,
   lesson:[
-    {t:'h',x:'Por que DI'},
-    {t:'p',x:'Injeção de dependência inverte o controle: a classe <b>recebe</b> suas dependências em vez de construí-las. Ganho: <b>testabilidade</b> (injeta fakes/mocks), desacoplamento e reuso. Prefira <b>injeção por construtor</b> — dependências explícitas e imutáveis.'},
+    {t:'h',x:'Por que DI (Inversão de Controle)'},
+    {t:'p',x:'Injeção de dependência é <b>inversão de controle</b>: a classe <b>recebe</b> suas dependências em vez de construí-las. Isso realiza o <b>Dependency Inversion Principle</b> — módulos de alto nível dependem de <b>abstrações</b> (interfaces), não de implementações concretas. Ganho: testabilidade, desacoplamento, reuso.'},
+    {t:'h',x:'Construtor vs campo'},
+    {t:'cmp',head:['','Injeção por construtor','Injeção por campo'],rows:[
+      ['Dependências','Explícitas e obrigatórias','Escondidas'],
+      ['Imutabilidade','Permite <code>val</code>/<code>final</code>','Não'],
+      ['Testável sem framework','Sim (passa fakes no construtor)','Não (precisa do container)'],
+      ['Veredito','<b>Prefira</b>','Evite']
+    ]},
     {t:'h',x:'Dagger, Hilt e Koin'},
     {t:'cmp',head:['','Dagger / Hilt','Koin'],rows:[
       ['Momento','<b>Compile-time</b> (gera código)','<b>Runtime</b> (DSL / service locator)'],
-      ['Erros','No <b>build</b> (grafo incompleto não compila)','Em <b>runtime</b> (falta binding estoura ao resolver)'],
-      ['Performance','Rápido em runtime','Overhead de resolução em runtime'],
+      ['Erros','No <b>build</b> (grafo incompleto não compila)','Em <b>runtime</b> (binding faltando estoura ao resolver)'],
+      ['Performance','Rápido (sem reflexão)','Overhead de resolução em runtime'],
       ['Curva','Mais íngreme','Mais simples de começar'],
-      ['Android','Hilt é Dagger + integração Android','Biblioteca Kotlin pura']
+      ['Android','Hilt = Dagger + integração Android','Biblioteca Kotlin pura']
     ]},
-    {t:'p',x:'<b>Hilt</b> reduz o boilerplate do Dagger com anotações Android-aware: <code>@HiltAndroidApp</code>, <code>@AndroidEntryPoint</code>, <code>@Inject</code>, <code>@Module @InstallIn</code>, <code>@HiltViewModel</code>. Scopes: <code>@Singleton</code>, <code>@ActivityRetainedScoped</code>, <code>@ViewModelScoped</code>, etc.'},
+    {t:'call',title:'Compile-time paga a conta antes',x:'Hilt/Dagger pegam o erro de grafo no <b>build</b>, não com o app crashando na mão do usuário — e sem custo de reflexão em runtime. O preço é tempo de compilação e curva. Koin inverte: começa rápido, mas binding ausente só aparece em runtime.'},
+    {t:'h',x:'Anatomia do Hilt'},
+    {t:'key',x:['<code>@HiltAndroidApp</code> na Application inicia o grafo.','<code>@AndroidEntryPoint</code> em Activity/Fragment habilita a injeção.','<code>@Inject</code> no construtor marca o que o Hilt sabe criar; <code>@HiltViewModel</code> para ViewModels.','<code>@Module @InstallIn(componente)</code> ensina o Hilt a fornecer o que ele não consegue construir sozinho.']},
     {t:'h',x:'@Binds vs @Provides'},
-    {t:'code',x:'<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">abstract class</span> DataModule {\n  <span class="kw">@Binds</span>  <span class="cm">// interface -&gt; impl, sem corpo</span>\n  <span class="kw">abstract fun</span> repo(impl: UserRepositoryImpl): UserRepository\n}\n\n<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">object</span> NetModule {\n  <span class="kw">@Provides</span>  <span class="cm">// precisa construir -&gt; @Provides</span>\n  <span class="kw">fun</span> ok(): OkHttpClient = OkHttpClient.Builder().build()\n}'},
-    {t:'key',x:['<code>@Binds</code> — liga uma <b>interface</b> à sua implementação; método abstrato, sem corpo. Mais eficiente (não gera fábrica).','<code>@Provides</code> — quando você precisa <b>construir</b> o objeto (ex.: instância de lib externa, com parâmetros), com corpo que retorna a instância.']},
-    {t:'real',x:'Repositório atrás de uma interface: <code>@Binds</code> liga <code>UserRepository</code> → <code>UserRepositoryImpl</code>. Já o Retrofit/OkHttp, que você constrói com builder, vai em <code>@Provides</code>. Trocar interface por fake nos testes é o motivo de tudo isso existir.'},
-    {t:'call',title:'Compile-time paga a conta antes',x:'A vantagem do Hilt/Dagger é pegar o erro de grafo no <b>build</b>, não com o app crashando na mão do usuário. O preço é tempo de compilação e curva. Koin inverte: começa rápido, mas erro de binding aparece em runtime.'}
+    {t:'code',x:'<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">abstract class</span> DataModule {\n  <span class="kw">@Binds</span>  <span class="cm">// interface -&gt; impl, método abstrato sem corpo</span>\n  <span class="kw">abstract fun</span> repo(impl: UserRepositoryImpl): UserRepository\n}\n\n<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">object</span> NetModule {\n  <span class="kw">@Provides</span>  <span class="cm">// precisa construir -&gt; @Provides com corpo</span>\n  <span class="kw">fun</span> ok(): OkHttpClient = OkHttpClient.Builder().build()\n}'},
+    {t:'key',x:['<code>@Binds</code> — liga <b>interface → impl</b> que o Hilt já sabe instanciar; abstrato, sem corpo, mais eficiente.','<code>@Provides</code> — quando você precisa <b>construir</b> o objeto (lib externa via builder, com parâmetros).']},
+    {t:'h',x:'Scopes & componentes'},
+    {t:'p',x:'O <b>scope</b> define quantas instâncias existem e por quanto tempo. Sem scope, cada injeção cria uma nova instância.'},
+    {t:'cmp',head:['Scope','Vive enquanto'],rows:[
+      ['<code>@Singleton</code>','O app inteiro'],
+      ['<code>@ActivityRetainedScoped</code>','A Activity, através de config changes'],
+      ['<code>@ViewModelScoped</code>','O ViewModel associado'],
+      ['<code>@ActivityScoped</code>','A Activity (recria no config change)']
+    ]},
+    {t:'h',x:'Qualifiers: dois do mesmo tipo'},
+    {t:'p',x:'Quando você tem <b>duas</b> instâncias do mesmo tipo (ex.: um <code>OkHttpClient</code> autenticado e outro público), um <b>qualifier</b> desambigua.'},
+    {t:'code',x:'<span class="kw">@Qualifier annotation class</span> Auth\n\n<span class="kw">@Provides @Auth</span> <span class="kw">fun</span> authClient(): OkHttpClient = ...  <span class="cm">// com token</span>\n<span class="kw">@Provides</span>        <span class="kw">fun</span> plainClient(): OkHttpClient = ... <span class="cm">// sem token</span>\n\n<span class="kw">class</span> Repo <span class="kw">@Inject</span> constructor(<span class="kw">@Auth</span> client: OkHttpClient)'},
+    {t:'real',x:'No SuperApp: a interface <code>UserRepository</code> é ligada por <code>@Binds</code> à impl; o Retrofit/OkHttp (builder) vai em <code>@Provides</code>. Nos testes, você troca o binding por um <b>fake</b> em memória — trocar a implementação sem tocar em quem usa é exatamente por isso que DI existe.'}
   ],
   quiz:[
     {type:'cmp',q:'Diferença fundamental entre <b>Hilt/Dagger</b> e <b>Koin</b>?',
@@ -1101,20 +1120,29 @@ const MODULES = [
   xp:55,
   lesson:[
     {t:'h',x:'As três opções'},
+    {t:'p',x:'Persistência local no Android hoje se resume a três escolhas — e usar a errada gera ANR ou complexidade desnecessária.'},
     {t:'cmp',head:['','SharedPreferences','DataStore','Room'],rows:[
-      ['Para','Pares chave-valor (legado)','Pares chave-valor / objeto tipado','Dados relacionais/estruturados'],
-      ['API','Síncrona (bloqueante)','<b>Assíncrona</b> (coroutines/Flow)','suspend/Flow'],
+      ['Para','Chave-valor (legado)','Chave-valor / objeto tipado','Dados relacionais/estruturados'],
+      ['API','Síncrona (bloqueante)','<b>Assíncrona</b> (Flow)','suspend / Flow'],
       ['Main thread','Pode bloquear (ANR)','Nunca bloqueia','Nunca (fora da Main)'],
       ['Observável','Não','Sim (Flow)','Sim (Flow)'],
       ['Transacional','Não','Sim','Sim']
     ]},
     {t:'h',x:'Room: ORM sobre SQLite'},
-    {t:'code',x:'<span class="kw">@Entity</span> <span class="kw">data class</span> Fatura(<span class="kw">@PrimaryKey</span> <span class="kw">val</span> id: String, <span class="kw">val</span> valor: Int)\n\n<span class="kw">@Dao</span> <span class="kw">interface</span> FaturaDao {\n  <span class="kw">@Query</span>(<span class="cm">"SELECT * FROM Fatura"</span>)\n  <span class="kw">fun</span> observar(): Flow&lt;List&lt;Fatura&gt;&gt;   <span class="cm">// re-emite quando a tabela muda</span>\n\n  <span class="kw">@Insert</span> <span class="kw">suspend fun</span> inserir(f: Fatura)\n}'},
-    {t:'key',x:['<code>@Entity</code> (tabela), <code>@Dao</code> (queries), <code>@Database</code> (banco).','SQL é <b>verificado em compile-time</b> — query inválida não compila.','DAO retorna <code>suspend</code> (one-shot) ou <code>Flow</code> (observa mudanças automaticamente).','<b>Migrations</b> preservam dados ao mudar o schema; <code>fallbackToDestructiveMigration()</code> <b>apaga tudo</b> — só em dev.']},
+    {t:'p',x:'Room gera acesso a dados sobre o SQLite com três peças: <code>@Entity</code> (tabela), <code>@Dao</code> (queries) e <code>@Database</code> (o banco). O <b>SQL é verificado em compile-time</b> — query inválida não compila. Relações via <code>@Relation</code>/<code>@Embedded</code>, tipos custom via <code>@TypeConverter</code>.'},
+    {t:'code',x:'<span class="kw">@Entity</span> <span class="kw">data class</span> Fatura(<span class="kw">@PrimaryKey</span> <span class="kw">val</span> id: String, <span class="kw">val</span> valor: Int, <span class="kw">val</span> pago: Boolean = <span class="kw">false</span>)\n\n<span class="kw">@Dao</span> <span class="kw">interface</span> FaturaDao {\n  <span class="kw">@Query</span>(<span class="cm">"SELECT * FROM Fatura WHERE pago = 0"</span>)\n  <span class="kw">fun</span> abertas(): Flow&lt;List&lt;Fatura&gt;&gt;   <span class="cm">// re-emite quando a tabela muda</span>\n\n  <span class="kw">@Insert</span>(onConflict = REPLACE) <span class="kw">suspend fun</span> upsert(f: Fatura)\n}'},
+    {t:'h',x:'Queries reativas com Flow'},
+    {t:'p',x:'Um DAO pode retornar <code>Flow</code> (observa: re-emite a cada mudança na tabela) ou <code>suspend</code> (one-shot). Com Flow, a UI reage automaticamente a inserções/updates — <b>sem polling</b>. É o alicerce do offline-first.'},
+    {t:'h',x:'Migrations — não perca os dados do usuário'},
+    {t:'p',x:'Ao mudar o schema (nova coluna/tabela), você fornece uma <b>Migration</b> que transforma o schema antigo no novo <b>preservando os dados</b>. <code>fallbackToDestructiveMigration()</code> recria o banco (apaga tudo) — aceitável só em dev.'},
+    {t:'code',x:'<span class="kw">val</span> MIGRATION_1_2 = <span class="kw">object</span> : Migration(1, 2) {\n  <span class="kw">override fun</span> migrate(db: SupportSQLiteDatabase) {\n    db.execSQL(<span class="cm">"ALTER TABLE Fatura ADD COLUMN pago INTEGER NOT NULL DEFAULT 0"</span>)\n  }\n}\n<span class="cm">// teste a migração com MigrationTestHelper — schema quebrado = crash em produção</span>'},
     {t:'h',x:'DataStore substitui SharedPreferences'},
-    {t:'p',x:'<b>Preferences DataStore</b> (chave-valor) e <b>Proto DataStore</b> (objeto tipado por protobuf). Ambos são assíncronos, expõem <code>Flow</code>, são transacionais e não bloqueiam a Main — resolvendo o principal problema do SharedPreferences.'},
-    {t:'call',title:'apply() vs commit()',x:'No SharedPreferences, <code>commit()</code> escreve <b>síncrono</b> e retorna sucesso — mas bloqueia a thread (ANR se na Main). <code>apply()</code> escreve <b>assíncrono</b> em disco. Mesmo apply, porém, ainda tem custo; DataStore é a escolha moderna justamente por ser 100% assíncrono.'},
-    {t:'real',x:'Token de sessão e flags do usuário: DataStore (assíncrono, observável). Histórico de faturas com filtros e joins: Room (relacional, query verificada, Flow reativo). SharedPreferences fica só em código legado que ainda não migrou.'}
+    {t:'key',x:['<b>Preferences DataStore</b> — chave-valor; <b>Proto DataStore</b> — objeto tipado por protobuf (com schema).','Ambos são <b>assíncronos</b>, expõem <code>Flow</code>, são <b>transacionais</b> e não bloqueiam a Main.','Migrar do SharedPreferences: há uma <code>SharedPreferencesMigration</code> pronta.']},
+    {t:'call',title:'apply() vs commit() (por que DataStore ganhou)',x:'No SharedPreferences, <code>commit()</code> escreve <b>síncrono</b> (bloqueia → ANR na Main); <code>apply()</code> escreve assíncrono, mas mesmo a carga inicial pode travar a Main. DataStore nasceu 100% assíncrono para matar essa classe de ANR.'},
+    {t:'h',x:'Offline-first: uma fonte da verdade'},
+    {t:'p',x:'O padrão robusto: o <b>Room é a fonte da verdade</b>. A UI observa o banco (Flow); a rede só <b>atualiza o cache</b>. O app funciona offline e fica consistente — nada de a tela depender de a rede responder.'},
+    {t:'call',title:'Segurança dos dados locais',x:'Token/segredo <b>nunca</b> em SharedPreferences em texto claro. Use <b>EncryptedSharedPreferences</b> (ou Proto DataStore + criptografia), com a chave no <b>Android Keystore</b>. Para o banco inteiro, SQLCipher. (Ver módulo Segurança Android.)'},
+    {t:'real',x:'No SuperApp: token e flags → DataStore (assíncrono, observável). Histórico de faturas com filtros e joins → Room (relacional, query verificada, Flow reativo, offline-first). SharedPreferences só sobra no legado ainda não migrado.'}
   ],
   quiz:[
     {type:'cmp',q:'Por que o <b>DataStore</b> é preferível ao <b>SharedPreferences</b> em código novo?',
@@ -1143,22 +1171,32 @@ const MODULES = [
   subtitle:'Todo dado do SuperApp vem da rede. Saber a stack (OkHttp/Retrofit/Ktor), onde entra o token e como serializar sem armadilhas é obrigatório para sênior.',
   xp:55,
   lesson:[
-    {t:'h',x:'A stack: OkHttp + Retrofit'},
-    {t:'code',x:'<span class="kw">interface</span> Api {\n  <span class="kw">@GET</span>(<span class="cm">"faturas"</span>) <span class="kw">suspend fun</span> faturas(): List&lt;Fatura&gt;\n}\n\n<span class="cm">// interceptor injeta o token em TODA request</span>\n<span class="kw">val</span> client = OkHttpClient.Builder()\n  .addInterceptor { chain -&gt;\n    <span class="kw">val</span> req = chain.request().newBuilder()\n      .addHeader(<span class="cm">"Authorization"</span>, <span class="cm">"Bearer $token"</span>).build()\n    chain.proceed(req)\n  }.build()'},
-    {t:'p',x:'<b>OkHttp</b> é o cliente HTTP de baixo nível (conexões, pool, cache, <b>interceptors</b>). <b>Retrofit</b> é uma camada type-safe <b>construída sobre o OkHttp</b>: você declara a API como interface, com <code>suspend fun</code>. <b>Ktor Client</b> é a alternativa multiplataforma, coroutine-first.'},
+    {t:'h',x:'A stack: OkHttp + Retrofit (+ Ktor)'},
+    {t:'p',x:'<b>OkHttp</b> é o cliente HTTP de baixo nível: conexões, connection pool, cache, <b>interceptors</b>. <b>Retrofit</b> é a camada type-safe <b>construída sobre o OkHttp</b> — você declara a API como interface com <code>suspend fun</code>, e ele gera a implementação. <b>Ktor Client</b> é a alternativa multiplataforma (KMP), coroutine-first.'},
+    {t:'code',x:'<span class="kw">interface</span> Api {\n  <span class="kw">@GET</span>(<span class="cm">"faturas"</span>) <span class="kw">suspend fun</span> faturas(): List&lt;Fatura&gt;\n}\n\n<span class="cm">// OkHttp constrói o transporte; Retrofit fica por cima</span>\n<span class="kw">val</span> client = OkHttpClient.Builder()\n  .connectTimeout(10, SECONDS).readTimeout(20, SECONDS)\n  .addInterceptor(HttpLoggingInterceptor())\n  .build()'},
     {t:'h',x:'Interceptors: onde entra o token'},
-    {t:'key',x:['Um <b>interceptor</b> intercepta toda requisição/resposta — lugar ideal para adicionar <code>Authorization</code>, logging, retry, métricas.','<b>Application interceptor</b> — roda uma vez por chamada; não vê redirects/retries internos.','<b>Network interceptor</b> — roda em cada request de rede (vê redirects, respostas de cache/304).']},
+    {t:'p',x:'Um <b>interceptor</b> vê toda requisição/resposta — o ponto único para <code>Authorization</code>, logging, métricas, retry. Repetir o header em cada endpoint é o anti-padrão que ele elimina.'},
+    {t:'cmp',head:['','Application interceptor','Network interceptor'],rows:[
+      ['Roda','Uma vez por chamada lógica','Em cada request de rede'],
+      ['Enxerga','Não vê redirects/retries','Vê redirects, cache/304'],
+      ['Uso','Auth, logging de alto nível','Depurar rede, cache, compressão']
+    ]},
+    {t:'code',x:'<span class="cm">// injeta o token em TODA request</span>\n.addInterceptor { chain -&gt;\n  <span class="kw">val</span> req = chain.request().newBuilder()\n    .addHeader(<span class="cm">"Authorization"</span>, <span class="cm">"Bearer $token"</span>).build()\n  chain.proceed(req)\n}'},
     {t:'h',x:'Serialização: codegen vs reflexão'},
     {t:'cmp',head:['','kotlinx.serialization / Moshi','Gson'],rows:[
-      ['Como','Codegen (processa em compilação)','Reflexão em runtime'],
-      ['Kotlin-aware','Sim (default values, non-null respeitados)','Não — pode injetar null em campo non-null'],
+      ['Como','Codegen (em compilação)','Reflexão em runtime'],
+      ['Kotlin-aware','Sim (default values, non-null respeitados)','Não — injeta null em campo non-null'],
       ['Performance','Melhor','Pior (reflexão)'],
-      ['Status','Recomendado','Legado/manutenção']
+      ['Status','Recomendado','Legado / manutenção']
     ]},
-    {t:'call',title:'A armadilha do Gson com Kotlin',x:'Gson usa reflexão e ignora a segurança de nulo do Kotlin: pode preencher um campo <code>String</code> non-null com <code>null</code> quando o JSON não traz o campo, causando NPE longe da origem. kotlinx.serialization/Moshi respeitam non-null e default values.'},
-    {t:'h',x:'Cache & resiliência'},
-    {t:'key',x:['OkHttp faz <b>cache HTTP</b> (respeita <code>Cache-Control</code>/ETag) — leitura offline e menos rede.','Defina <b>timeouts</b> (connect/read/write) explicitamente.','Modele erros num <code>sealed</code> Result (Success/Error/Loading), não deixe exceção vazar para a UI.']},
-    {t:'real',x:'Token expira e todo request 401? Um <b>Authenticator</b>/interceptor renova o token e repete a chamada uma vez — o usuário nem percebe. Adicionar o header de auth em cada endpoint na mão é o anti-padrão que o interceptor elimina.'}
+    {t:'call',title:'A armadilha do Gson com Kotlin',x:'Gson usa reflexão e ignora a nulabilidade do Kotlin: quando o JSON não traz um campo, ele pode preencher um <code>String</code> non-null com <code>null</code> → NPE longe da origem. kotlinx.serialization/Moshi respeitam non-null e default values.'},
+    {t:'h',x:'Tratamento de erro: nada vaza para a UI'},
+    {t:'p',x:'Exceção de rede não pode subir crua até a tela. Modele o resultado num <code>sealed</code> e mapeie os erros (offline, timeout, 4xx, 5xx) para estados que a UI sabe mostrar.'},
+    {t:'code',x:'<span class="kw">sealed interface</span> Resultado&lt;out T&gt; {\n  <span class="kw">data class</span> Ok&lt;T&gt;(<span class="kw">val</span> data: T) : Resultado&lt;T&gt;\n  <span class="kw">data class</span> Erro(<span class="kw">val</span> causa: Throwable) : Resultado&lt;Nothing&gt;\n}\n<span class="kw">suspend fun</span> &lt;T&gt; chamar(bloco: <span class="kw">suspend</span> () -&gt; T) =\n  <span class="kw">try</span> { Resultado.Ok(bloco()) } <span class="kw">catch</span> (e: Exception) { Resultado.Erro(e) }'},
+    {t:'h',x:'Cache HTTP & offline-first'},
+    {t:'key',x:['OkHttp faz <b>cache HTTP</b> (respeita <code>Cache-Control</code>/ETag) — menos rede, leitura offline.','Padrão robusto: <b>offline-first</b> com <b>Room como fonte da verdade</b>; a rede só atualiza o cache, e a UI observa o banco.','Defina <b>timeouts</b> (connect/read/write) explicitamente — o default pode ser longo demais.']},
+    {t:'h',x:'Resiliência: retry e refresh de token'},
+    {t:'real',x:'Token expira e todo request volta 401? Um <b>Authenticator</b> do OkHttp renova o token e <b>repete</b> a chamada uma vez — transparente para o usuário. Para falhas transitórias, retry com <b>backoff</b> (não em loop infinito). E toda chamada é <b>HTTPS</b>; dados sensíveis pedem <b>certificate pinning</b> (ver módulo de Segurança).'}
   ],
   quiz:[
     {type:'case',q:'Você precisa anexar o header <code>Authorization: Bearer …</code> em <b>todas</b> as requisições sem repetir código em cada endpoint. Como?',
@@ -1618,28 +1656,35 @@ const MODULES = [
   xp:60,
   lesson:[
     {t:'h',x:'A pirâmide de testes'},
-    {t:'p',x:'Base larga de <b>testes unitários</b> (rápidos, isolados, baratos), uma camada menor de <b>integração</b>, e um topo estreito de <b>E2E/UI</b> (lentos, frágeis, caros). Muitos E2E = suíte lenta e <b>flaky</b>.'},
+    {t:'p',x:'Base larga de <b>testes unitários</b> (rápidos, isolados, baratos), uma camada menor de <b>integração</b>, e um topo estreito de <b>E2E/UI</b> (lentos, frágeis, caros). Inverter isso (o "cone de sorvete", muitos E2E) gera uma suíte lenta, <b>flaky</b> e cara de manter — o anti-padrão que mata a confiança no CI.'},
     {t:'cmp',head:['Nível','Velocidade','Escopo','Quantidade'],rows:[
       ['<b>Unitário</b>','Muito rápida','Uma unidade isolada','Muitos'],
-      ['<b>Integração</b>','Média','Componentes juntos','Alguns'],
-      ['<b>E2E / UI</b>','Lenta','App inteiro','Poucos']
+      ['<b>Integração</b>','Média','Componentes juntos (DAO, repo)','Alguns'],
+      ['<b>E2E / UI</b>','Lenta','App inteiro / device','Poucos']
     ]},
+    {t:'h',x:'O que testar em cada nível (Android)'},
+    {t:'key',x:['<b>Unitário</b>: ViewModel, use cases, mappers, lógica de domínio — na JVM, sem Android.','<b>Integração</b>: DAO do Room (banco em memória), repository (rede fake + cache), serialização.','<b>UI</b>: Compose UI Test / Espresso para fluxos críticos (login, checkout).']},
     {t:'h',x:'Ferramentas Android'},
+    {t:'key',x:['<b>JUnit</b> + <b>MockK</b>/Mockito + <b>Truth</b>/AssertJ — unidade na JVM.','<b>Robolectric</b> — Android <b>na JVM</b> (rápido, sem device). <b>Espresso</b> — UI <b>instrumentada</b> (device/emulador).','<b>Compose UI Test</b> — <code>createComposeRule()</code>. <b>coroutines-test</b> (<code>runTest</code>) + <b>Turbine</b> para Flow.']},
+    {t:'h',x:'Testando coroutines & Flow'},
+    {t:'p',x:'Nunca dependa de <code>Dispatchers.Main</code> direto: <b>injete o dispatcher</b>. No teste, um <code>TestDispatcher</code> com <code>runTest</code> controla o <b>tempo virtual</b> — determinístico, sem flaky de timing (<code>StandardTestDispatcher</code> enfileira; <code>UnconfinedTestDispatcher</code> roda eager).'},
     {t:'code',x:'<span class="kw">@Test</span> <span class="kw">fun</span> emiteEstados() = runTest {\n  <span class="kw">val</span> vm = FaturasVM(FakeRepo(), StandardTestDispatcher())\n  vm.state.test {                 <span class="cm">// Turbine observa o Flow</span>\n    assertEquals(Loading, awaitItem())\n    vm.carregar()\n    assertTrue(awaitItem() <span class="kw">is</span> Ok)\n  }\n}'},
-    {t:'key',x:['<b>JUnit</b> + <b>MockK</b>/Mockito + <b>Truth</b>/AssertJ — testes de unidade na JVM.','<b>Robolectric</b> — testes de Android <b>na JVM</b> (rápido, sem device). <b>Espresso</b> — testes de UI <b>instrumentados</b> (no device/emulador).','<b>Compose UI Test</b> — <code>createComposeRule()</code> para testar composables.','<b>coroutines-test</b> (<code>runTest</code>, <code>TestDispatcher</code>) + <b>Turbine</b> para testar <b>Flow/StateFlow</b>.']},
     {t:'h',x:'Test doubles — mock × fake × stub × spy'},
     {t:'cmp',head:['Double','O que é'],rows:[
       ['<b>Stub</b>','Retorna respostas fixas pré-programadas (sem lógica)'],
       ['<b>Mock</b>','Como o stub, mas <b>verifica interações</b> (foi chamado? com quê?)'],
-      ['<b>Fake</b>','Implementação real porém simplificada (ex.: repositório em memória)'],
+      ['<b>Fake</b>','Implementação real, porém simplificada (repositório em memória)'],
       ['<b>Spy</b>','Objeto real parcialmente observado/sobrescrito']
     ]},
-    {t:'call',title:'Teste comportamento, não implementação',q:'',x:'<b>100% de cobertura não garante ausência de bugs</b> — cobertura mede linhas executadas, não corretude. Um teste que trava a implementação interna quebra a cada refactor legítimo. Teste o <b>comportamento observável</b>.'},
-    {t:'h',x:'Injete o Dispatcher'},
-    {t:'p',x:'Nunca dependa de <code>Dispatchers.Main</code> direto em código testável: <b>injete o dispatcher</b>. No teste, passe um <code>TestDispatcher</code> com <code>runTest</code> — controla o tempo virtual e torna o teste determinístico (fim dos flaky por timing).'},
+    {t:'call',title:'Prefira fakes a mocks quando der',x:'Mock que verifica cada interação acopla o teste à <b>implementação</b> — quebra a cada refactor legítimo. Um <b>fake</b> (repo em memória) testa <b>comportamento</b> e sobrevive a refactors. Regra: teste o que a unidade <em>faz</em>, não <em>como</em> ela faz.'},
+    {t:'h',x:'Testando Compose'},
+    {t:'code',x:'<span class="kw">@get:Rule</span> <span class="kw">val</span> rule = createComposeRule()\n\n<span class="kw">@Test</span> <span class="kw">fun</span> mostraErro() {\n  rule.setContent { Tela(UiState.Error(<span class="cm">"falhou"</span>)) }\n  rule.onNodeWithText(<span class="cm">"falhou"</span>).assertIsDisplayed()\n}'},
+    {t:'p',x:'O teste de Compose consulta a <b>árvore de semântica</b> (<code>onNodeWithText</code>, <code>onNodeWithContentDescription</code>) — o mesmo que o TalkBack lê. Testar por semântica cobre funcionalidade <b>e</b> acessibilidade de uma vez.'},
+    {t:'h',x:'Cobertura: sinal, não meta'},
+    {t:'call',title:'100% não garante nada',x:'Cobertura mede <b>linhas executadas</b>, não corretude — dá para ter 100% com testes que não afirmam nada útil. Vale como sinal (o que nunca roda?), não como meta perseguida. O que importa é cobrir o <b>comportamento</b> e os <b>edge cases</b> (erro, offline, vazio).'},
     {t:'h',x:'Code review que agrega'},
-    {t:'key',x:['Foque no que a máquina não vê: <b>corretude, design, legibilidade, segurança</b>.','<b>Automatize</b> formatação/estilo/lint (ktlint/detekt) — deixe o humano para o que importa; nada de bikeshedding de vírgula.','<b>PRs pequenos</b> recebem review melhor. Feedback <b>acionável</b> e específico, não “não gostei”.','Revisando código de <b>IA</b>: desconfie de APIs inventadas, testes que não testam nada e “parece certo mas não trata o edge case”.']},
-    {t:'real',x:'No SuperApp, um agente abre um MR. O pipeline roda detekt + testes + Sonar gate (a máquina valida o mecânico); o humano revisa se a jornada está correta, se o edge case de rede offline foi tratado e se o estado de erro é acessível. Divisão de trabalho: máquina no repetível, humano no julgamento.'}
+    {t:'key',x:['Foque no que a máquina não vê: <b>corretude, design, legibilidade, segurança, edge cases</b>.','<b>Automatize</b> formatação/estilo/lint (ktlint/detekt) — nada de bikeshedding de vírgula.','<b>PRs pequenos</b> recebem review melhor; feedback <b>acionável</b> e específico, não "não gostei".','Revisando código de <b>IA</b>: desconfie de APIs/paths inventados, testes que não testam nada e "parece certo mas não trata o edge case".']},
+    {t:'real',x:'No SuperApp (agentic SDLC), um agente abre o MR; o pipeline roda detekt + testes + Sonar gate (a máquina valida o mecânico) e o humano revisa se a jornada está correta, se o offline foi tratado e se o estado de erro é acessível. Máquina no repetível, humano no julgamento.'}
   ],
   quiz:[
     {type:'core',q:'Por que a pirâmide de testes recomenda <b>muitos</b> unitários e <b>poucos</b> E2E?',
