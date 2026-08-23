@@ -412,6 +412,22 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
 .btn.ivweak{background:transparent;color:var(--accent-ink);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
 .btn.ivweak:hover{background:var(--accent-soft);color:var(--accent-ink)}
 .ivnote{max-width:520px;margin:4px auto 0;font-size:13.5px;color:var(--text-dim)}
+/* FLASHCARDS */
+.boss.fl{background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 12%,var(--surface)),var(--surface));border-color:color-mix(in srgb,var(--gold) 30%,var(--border))}
+.boss.fl .fltag{color:var(--gold)}
+.boss.fl .bossbest b{color:var(--gold)}
+.btn.flbtn{background:var(--gold);color:#1a1204;border-color:transparent}
+.btn.flbtn:hover{filter:brightness(1.06);color:#1a1204}
+.chip.flchip{background:var(--gold-soft);color:var(--gold);border-color:transparent}
+.flcard{max-width:640px;margin:22px auto 0}
+.flface{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:34px 28px;box-shadow:var(--shadow-lg);text-align:center;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.flface[hidden]{display:none}
+.flq{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:24px;line-height:1.25;letter-spacing:-.01em;color:var(--text);text-wrap:balance}
+.flflip{margin-top:4px}
+.flbl{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;color:var(--gold)}
+.flback{border-color:color-mix(in srgb,var(--gold) 30%,var(--border));background:color-mix(in srgb,var(--gold) 5%,var(--surface))}
+.fla{font-size:17px;line-height:1.55;color:var(--text);text-wrap:pretty}
+.flrate{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;margin-top:8px;padding-top:16px;border-top:1px solid var(--border);width:100%}
 </style>
 
 <div class="topbar">
@@ -498,6 +514,15 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
     <div class="qscore"><span>👍 <b id="ivGood">0</b></span><span class="wr">📖 <span id="ivRev">0</span></span></div>
   </div>
   <div id="ivStage"></div>
+</div></div>
+
+<div id="flash" class="view"><div class="wrap">
+  <div class="backbar" id="flBack"></div>
+  <div class="quizhead">
+    <div class="qprog"><div class="bar"><i id="flBar"></i></div><div class="lbl" id="flProgLbl"></div></div>
+    <div class="qscore"><span>✓ <b id="flKnow">0</b></span><span class="wr">✗ <span id="flNo">0</span></span></div>
+  </div>
+  <div id="flStage"></div>
 </div></div>
 
 <div id="catalog" class="view"><div class="wrap">
@@ -2156,6 +2181,58 @@ const MODULES = [
    t = id do módulo (ou "soft" p/ comportamental). model = tópicos que
    uma boa resposta sênior cobre (auto-avaliação, não gabarito fechado).
    ================================================================= */
+/* =================================================================
+   FLASHCARDS — cards de conceito p/ recall rápido (t = id do módulo)
+   ================================================================= */
+const FLASH = [
+  {t:'ia',f:'Agente × workflow × copiloto?',b:'Agente: o LLM dirige o loop e escolhe as ferramentas. Workflow: código orquestra passos fixos. Copiloto: sugere, humano no comando.'},
+  {t:'ia',f:'Como garantir um agente confiável em produção?',b:'Evals automatizados + gates de CI (testes/lint/Sonar) como autoridade + observabilidade. Nunca "eu leio a saída dele".'},
+  {t:'sdd',f:'O que é Spec-Driven Development?',b:'A spec versionada é a fonte da verdade (o QUÊ/PORQUÊ), com critérios de aceite verificáveis; o código deriva dela.'},
+  {t:'sdd',f:'Critério de aceite: bom × ruim?',b:'Ruim: "deve ser rápido". Bom: "primeiro frame em até 1s no cold start" — testável e mensurável (Given/When/Then).'},
+  {t:'claude',f:'MCP — o que é e que problema resolve?',b:'Protocolo aberto que liga o agente a ferramentas/dados externos. Evita reescrever N×M conectores (o USB-C das integrações).'},
+  {t:'claude',f:'Skill × Subagent × Hook?',b:'Skill: conhecimento/procedimento. Subagent: isola contexto e paraleliza. Hook: código determinístico que sempre roda num evento.'},
+  {t:'kotlin',f:'StateFlow × SharedFlow?',b:'StateFlow: estado atual (tem valor inicial), ideal p/ UI. SharedFlow: eventos one-shot (navegar, snackbar), sem valor atual.'},
+  {t:'kotlin',f:'Por que !! é cheiro ruim?',b:'Força o valor e lança NPE em runtime — joga fora a null safety. Prefira ?., ?: ou requireNotNull.'},
+  {t:'android',f:'O que sobrevive a config change × process death?',b:'ViewModel sobrevive a config change, NÃO a process death. SavedStateHandle sobrevive a ambos (Bundle). Room/DataStore é durável.'},
+  {t:'android',f:'MVI — principal vantagem?',b:'Estado único imutável + fluxo unidirecional: UI previsível, fácil de testar e reproduzir bug. Custo: mais boilerplate.'},
+  {t:'compose',f:'LazyColumn pisca e perde estado ao rolar — por quê?',b:'Falta key estável (key={it.id}). Sem identidade, o Compose reaproveita a composição do slot errado.'},
+  {t:'compose',f:'remember × rememberSaveable?',b:'remember sobrevive à recomposição; rememberSaveable também sobrevive à rotação/process death (via Bundle/Saver).'},
+  {t:'coroutines',f:'Flow frio × hot?',b:'Frio re-executa o upstream a cada coletor. Hot (StateFlow/SharedFlow) é multicast: 1 execução, N coletores. Converta com stateIn/shareIn.'},
+  {t:'coroutines',f:'Busca mostra resultado de query antiga — resolve como?',b:'flatMapLatest cancela a busca anterior; + debounce; trabalho pesado em flowOn(IO).'},
+  {t:'di',f:'Hilt/Dagger × Koin?',b:'Hilt/Dagger: compile-time, erro no build, sem reflexão. Koin: runtime via DSL, erro só ao resolver a dependência.'},
+  {t:'di',f:'Erro comum de scope no Hilt?',b:'@Singleton em tudo. Um singleton segurando Context de Activity vira leak. Use o menor escopo que resolve.'},
+  {t:'nav',f:'Por que passar id e não o objeto na navegação?',b:'Args vão pro Bundle (limitado/serializável) — objeto grande estoura TransactionTooLarge e acopla telas. Passe id; o destino busca os dados.'},
+  {t:'nav',f:'Bottom nav perde estado ao trocar de aba — fix?',b:'saveState/restoreState no navigate; cada aba com seu back stack; ViewModel com escopo por destino.'},
+  {t:'storage',f:'Room × DataStore × SharedPreferences?',b:'Room: relacional/consultável. DataStore: chave-valor assíncrono (Flow). SharedPreferences: legado síncrono (risco de ANR).'},
+  {t:'storage',f:'Por que migrations no Room importam?',b:'Mudar o schema sem migration = crash ou perda de dados. Escreva Migration(from,to) e teste; fallback destrutivo apaga tudo.'},
+  {t:'network',f:'Offline-first — arquitetura?',b:'Room é a fonte única da verdade; a UI observa Flow do banco. A rede só atualiza o cache. Funciona offline.'},
+  {t:'network',f:'Refresh de token (401) transparente no OkHttp?',b:'Authenticator intercepta o 401 e renova uma vez; sincronize p/ não disparar N refresh; se falhar, manda p/ login.'},
+  {t:'background',f:'WorkManager: usar quando / não usar?',b:'Usar: trabalho garantido e deferível (sobrevive a reboot). Não: imediato/visível (Foreground Service) ou horário exato (AlarmManager).'},
+  {t:'background',f:'Foreground Service — regra?',b:'Trabalho contínuo e visível (player, rastreio) com notificação. Android 14+ exige foregroundServiceType; startForeground em < 5s.'},
+  {t:'perf',f:'App abre devagar — o que fazer?',b:'Meça antes (Macrobenchmark/Profiler). Enxugue Application.onCreate, App Startup, baseline profiles. Jank na Main; leaks com LeakCanary.'},
+  {t:'perf',f:'O que o R8 faz e o que ele quebra?',b:'Shrink+obfuscate+optimize (APK menor). Quebra reflexão/Gson sem regras keep. Guarde mapping.txt p/ desofuscar crashes.'},
+  {t:'build',f:'implementation × api no Gradle?',b:'implementation encapsula (só o dono recompila). api vaza transitivo (recompila consumidores). Padrão: implementation.'},
+  {t:'build',f:'Como deixar o build mais rápido?',b:'Modularização real (implementation), configuration cache + build cache, execução paralela, KSP no lugar de KAPT.'},
+  {t:'security',f:'Onde guardar um token de sessão?',b:'EncryptedSharedPreferences/DataStore com chave no Keystore. Nunca em texto plano nem hardcoded. TLS + certificate pinning.'},
+  {t:'security',f:'Certificate pinning — qual o risco?',b:'Impede MITM, mas se o servidor rotaciona o cert e o app não atualiza, quebra tudo. Use pin de backup + rotação planejada.'},
+  {t:'release',f:'Por que AAB e não APK? E Play App Signing?',b:'A Play gera APKs otimizados por device (download menor). Play App Signing guarda a chave de assinatura; você mantém a upload key.'},
+  {t:'release',f:'versionCode × versionName?',b:'versionCode: inteiro sempre crescente (a Play ordena por ele). versionName: string visível. Esquecer de subir o code → upload rejeitado.'},
+  {t:'multirepo',f:'Multi-repo × mono-repo?',b:'Multi: autonomia/isolamento, mas mudança atômica difícil + versionar artefatos. Mono: atômico fácil, autonomia menor.'},
+  {t:'multirepo',f:'SemVer — o que cada número significa?',b:'MAJOR quebra compatibilidade, MINOR adiciona compatível, PATCH corrige. Consuma versão fixa publicada, não branch flutuante.'},
+  {t:'wcag',f:'Contraste mínimo AA p/ texto normal?',b:'4.5:1 (3:1 p/ texto grande). 7:1 é AAA. E não passe informação só por cor (critério 1.4.1).'},
+  {t:'wcag',f:'Alvo de toque de 44px é nível AA?',b:'Não — 44px (2.5.5) é AAA. O mínimo AA (24px, 2.5.8) só surgiu na WCAG 2.2. Pegadinha clássica.'},
+  {t:'aws',f:'App acessa o S3 com segurança — como?',b:'Presigned URL gerada pelo backend, ou credenciais temporárias (STS) via Cognito Identity Pool. Nunca Access Key no APK.'},
+  {t:'aws',f:'Cognito User Pool × Identity Pool?',b:'User Pool: diretório/login (tokens JWT). Identity Pool: troca a identidade por credenciais AWS temporárias (STS).'},
+  {t:'devops',f:'Quality gate + "clean as you code"?',b:'O gate barra o merge se as métricas do código NOVO furam o limite (cobertura, bugs, smells). Foca no diff, não na dívida histórica.'},
+  {t:'devops',f:'Onde ficam os segredos do pipeline?',b:'Em variáveis protegidas/masked do CI, nunca no repo. Keystore injetado só no build assinado. Vazou no git = comprometeu.'},
+  {t:'quality',f:'Pirâmide de testes?',b:'Base: muitos unitários (rápidos). Meio: integração. Topo: poucos E2E (fluxos críticos). Anti-padrão: cone de sorvete.'},
+  {t:'quality',f:'Mock × fake × stub?',b:'Stub: respostas fixas. Mock: verifica interação. Fake: impl real simplificada (repo em memória) — sobrevive a refactor.'},
+  {t:'agile',f:'DoR × DoD?',b:'DoR: critérios p/ a história ENTRAR na sprint (clara, estimada). DoD: critérios p/ estar PRONTA (testada, revisada, no gate).'},
+  {t:'agile',f:'Qual o objetivo real da daily?',b:'O time se sincroniza e replaneja o dia rumo à meta + levanta impedimentos. NÃO é relatório de status pro gestor.'},
+  {t:'java',f:'Métodos HTTP idempotentes?',b:'GET, PUT, DELETE são idempotentes; POST não. Guia retries seguros: POST precisa de chave de idempotência.'},
+  {t:'java',f:'Problema N+1 em JPA?',b:'1 query da lista + N das relações lazy = explosão de queries. Resolva com JOIN FETCH / @EntityGraph / batch size.'}
+];
+
 const INTERVIEW = [
   {t:'ia',q:'Explique a diferença entre um <b>agente</b>, um <b>workflow determinístico</b> e um <b>copiloto</b>. Quando você escolheria cada um num fluxo de desenvolvimento?',model:['Agente: o LLM dirige o loop e decide quais ferramentas chamar — caminho não é fixo.','Workflow: código orquestra passos fixos (LLM só preenche lacunas) — previsível, barato, testável.','Copiloto: sugere/autocompleta, humano no comando o tempo todo.','Escolha: workflow quando os passos são conhecidos; agente quando o caminho é incerto e vale o custo/risco.']},
   {t:'ia',q:'Como você tornaria um agente de código <b>confiável</b> o suficiente para abrir Pull Requests sozinho no SuperApp?',model:['Tratar a saída como PR não-confiável: sempre passa por review humano + CI.','Gates de CI como autoridade final: build, testes, lint, cobertura, Sonar.','Evals automatizados medindo taxa de acerto antes de soltar em produção.','Observabilidade: tracing de cada passo/ferramenta para depurar.','Human-in-the-loop obrigatório em ações irreversíveis (merge, deploy, migration).']},
@@ -2255,7 +2332,7 @@ const INTERVIEW = [
    ESTADO / PERSISTÊNCIA
    ================================================================= */
 const LS_KEY='sia_v2';
-const DEFAULT={xp:0, lessons:{}, quiz:{}, boss:{}, iv:{}, ivq:{}, sub:{}, vagas:[], activeVaga:null, seeded:false};
+const DEFAULT={xp:0, lessons:{}, quiz:{}, boss:{}, iv:{}, ivq:{}, flash:{}, flashq:{}, sub:{}, vagas:[], activeVaga:null, seeded:false};
 function uid(){return 'v'+Math.random().toString(36).slice(2,7)+Date.now().toString(36).slice(-3);}
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -2446,7 +2523,15 @@ function renderHome(){
         '<button class="btn big ivbtn" '+(n?'':'disabled ')+'onclick="startInterview(\''+v.id+'\')">'+svg(IMIC)+'Iniciar ('+n+')</button>'+
         (wn?'<button class="btn ivweak" type="button" onclick="startInterview(\''+v.id+'\',{weak:true})">'+svg('<path d="M12 20V10M18 20V4M6 20v-4"/>')+'Revisar fracos ('+wn+')</button>':'')+
       '</div>'+
-    '</div>';})();
+    '</div>';})()+
+    (function(){var fb=(S.flash&&S.flash[v.id]),fn=flashCount(v),fw=flashWeakList(v).length;return fn?'<div class="boss fl">'+
+      '<div class="bossL"><div class="bosstag fltag">'+svg(ICARD)+'REVISÃO RELÂMPAGO</div>'+
+        '<h3>Flashcards — recall rápido</h3>'+
+        '<p>'+fn+' cards de conceito da vaga. Vê a pergunta, responde de cabeça, vira e marca se sabia. <b>Sem timer</b> — no seu ritmo.</p></div>'+
+      '<div class="bossR">'+(fb?'<div class="bossbest">Melhor: <b>'+fb.know+'/'+fb.total+'</b> sabia</div>':'<div class="bossbest">Ainda não revisada</div>')+
+        '<button class="btn big flbtn" type="button" onclick="startFlash(\''+v.id+'\')">'+svg(ICARD)+'Revisar ('+Math.min(fn,20)+')</button>'+
+        (fw?'<button class="btn ivweak" type="button" onclick="startFlash(\''+v.id+'\',{weak:true})">'+svg('<path d="M12 20V10M18 20V4M6 20v-4"/>')+'Só os que faltaram ('+fw+')</button>':'')+
+      '</div></div>':'';})();
   const g=$('#grid'); g.innerHTML='';
   if(!ts.length){g.innerHTML='<p class="dim" style="grid-column:1/-1">Nenhum assunto nesta vaga. Clique em <b>Editar assuntos</b> para escolher do banco.</p>';}
   ts.forEach(function(m,i){var el=document.createElement('div');el.className='card'+(moduleProgress(m).pct>=100?' done':'');el.innerHTML=topicCard(m,i);g.appendChild(el);});
@@ -2774,6 +2859,68 @@ function ivRecToggle(){
   var mb=$('#ivMic');if(mb)mb.innerHTML=svg(IMICOFF)+'Parar';var st=$('#ivStatus');if(st)st.textContent='Ouvindo…';
 }
 function ivRecStop(){if(IV.rec&&IV.recOn){try{IV.rec.stop();}catch(e){}}IV.recOn=false;var mb=$('#ivMic');if(mb)mb.innerHTML=svg(IMIC)+'Gravar resposta';}
+
+/* =================================================================
+   FLASHCARDS — revisão relâmpago (sem timer)
+   ================================================================= */
+var ICARD='<rect x="3" y="5" width="13" height="15" rx="2"/><path d="M8 5V3h13v15h-2"/>';
+var FL={cards:[],i:0,know:0,soso:0,no:0,vaga:null,flipped:false,rated:false,weak:false};
+function flashKey(c){var s=c.f,h=0,i;for(i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0;}return 'f'+(h>>>0).toString(36);}
+function flashPool(v){var ids={};vagaTopics(v).forEach(function(t){ids[t.id]=1;});return FLASH.filter(function(c){return ids[c.t];});}
+function flashCount(v){return flashPool(v).length;}
+function flashWeakList(v){return flashPool(v).filter(function(c){return (S.flashq&&S.flashq[flashKey(c)])==='no';});}
+function flashArea(t){var m=getTopic(t);return m?m.title:t;}
+function startFlash(vid,opts){
+  opts=opts||{};var v=getVaga(vid);if(!v)return;var deck;
+  if(opts.weak){deck=flashWeakList(v);if(!deck.length){toast('Nenhum card marcado como "não sabia"');return;}deck=shuffle(deck.slice());}
+  else{deck=flashPool(v);if(!deck.length){toast('Vaga sem flashcards');return;}deck=shuffle(deck.slice());if(deck.length>20)deck=deck.slice(0,20);}
+  FL={cards:deck,i:0,know:0,soso:0,no:0,vaga:v,flipped:false,rated:false,weak:!!opts.weak};gReturn='home';
+  var label=opts.weak?' Revisar cards · ':' Flashcards · ';
+  $('#flBack').innerHTML=backBtn("backHome()",'Sair')+'<span class="chip flchip">'+svg(ICARD)+label+esc(v.name)+'</span>';
+  go('flash');window.scrollTo(0,0);renderFlash();
+}
+function renderFlash(){
+  var c=FL.cards[FL.i],total=FL.cards.length;FL.flipped=false;FL.rated=false;
+  $('#flBar').style.width=Math.round(FL.i/total*100)+'%';
+  $('#flProgLbl').textContent='Card '+(FL.i+1)+' de '+total;
+  $('#flKnow').textContent=FL.know;$('#flNo').textContent=FL.no;
+  $('#flStage').innerHTML='<div class="flcard">'+
+    '<div class="flface flfront"><span class="qtype cmp">'+svg('<path d="M12 2 2 7l10 5 10-5z"/>',1.8)+flashArea(c.t)+'</span>'+
+      '<div class="flq">'+c.f+'</div>'+
+      '<button class="btn primary flflip" type="button" onclick="flashFlip()">'+svg('<path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.7 3L21 8"/><path d="M21 3v5h-5"/>')+'Virar</button></div>'+
+    '<div class="flface flback" hidden id="flBackFace"><div class="flbl">RESPOSTA</div><div class="fla">'+c.b+'</div>'+
+      '<div class="flrate"><span class="ivrl">Você sabia?</span>'+
+        '<button class="btn rate good" type="button" onclick="flashRate(\'know\')">✓ Sabia</button>'+
+        '<button class="btn rate mid" type="button" onclick="flashRate(\'soso\')">~ Mais ou menos</button>'+
+        '<button class="btn rate bad" type="button" onclick="flashRate(\'no\')">✗ Não sabia</button></div></div>'+
+  '</div>';
+  window.scrollTo(0,0);
+}
+function flashFlip(){if(FL.flipped)return;FL.flipped=true;var f=document.querySelector('#flStage .flfront'),b=$('#flBackFace');if(f)f.hidden=true;if(b)b.hidden=false;}
+function flashRate(kind){
+  if(FL.rated)return;FL.rated=true;
+  if(kind==='know')FL.know++;else if(kind==='soso')FL.soso++;else FL.no++;
+  if(!S.flashq)S.flashq={};S.flashq[flashKey(FL.cards[FL.i])]=kind;
+  if(kind==='know')S.xp+=5;save();updateHUD();
+  if(FL.i>=FL.cards.length-1)finishFlash();else{FL.i++;renderFlash();}
+}
+function finishFlash(){
+  var total=FL.cards.length,know=FL.know,soso=FL.soso,no=FL.no,weak=FL.weak;
+  if(!S.flash)S.flash={};var prev=S.flash[FL.vaga.id],best=!weak&&(!prev||know>prev.know);if(best)S.flash[FL.vaga.id]={know:know,total:total};save();
+  var pct=Math.round(know/total*100);
+  var medal=pct>=80?'⚡':pct>=50?'📈':'🌱';
+  var title=pct>=80?'Recall afiado!':pct>=50?'Fixando bem':'Precisa revisar mais';
+  $('#flStage').innerHTML='<div class="result">'+
+    '<div class="medal">'+medal+'</div><h2>'+title+'</h2>'+
+    '<div class="big">'+know+'<small>/'+total+'</small></div>'+
+    '<div class="ivtally"><span>✓ '+know+' sabia</span><span>~ '+soso+' mais ou menos</span><span>✗ '+no+' não sabia</span></div>'+
+    (no?'<p>Rode <b>Só os que faltaram</b> pra fixar o que escapou.</p>':'<p>Mandou bem — recall no ponto.</p>')+
+    '<div class="actions"><button class="btn" type="button" onclick="startFlash(\''+FL.vaga.id+'\')">'+svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>')+'Novo baralho</button>'+
+      (no?'<button class="btn ivweak" type="button" onclick="startFlash(\''+FL.vaga.id+'\',{weak:true})">Revisar os que faltaram</button>':'')+
+      '<button class="btn primary" type="button" onclick="backHome()">Voltar à trilha '+svg('<path d="m9 18 6-6-6-6"/>')+'</button></div></div>';
+  $('#flBar').style.width='100%';$('#flProgLbl').textContent='Concluído';
+  renderHome();window.scrollTo(0,0);
+}
 
 /* =================================================================
    NAV / UTIL
