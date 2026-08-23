@@ -889,29 +889,41 @@ const MODULES = [
   subtitle:'A UI moderna do redesign é Compose. Aqui vai o que cai em code review sênior: quando recompõe, como segurar estado, qual side-effect usar e por que sua lista trava.',
   xp:60,
   lesson:[
+    {t:'h',x:'As três fases do Compose'},
+    {t:'p',x:'Um frame do Compose passa por três fases: <b>Composition</b> (o que desenhar — executa os composables e monta a árvore), <b>Layout</b> (medir e posicionar) e <b>Drawing</b> (pintar). Entender isso é o que separa quem otimiza de quem chuta: um estado lido só no Drawing (ex.: cor) não precisa recompor — pode-se ler o estado tarde (lambda no Modifier) e pular Composition/Layout.'},
     {t:'h',x:'Recomposition: o coração do Compose'},
-    {t:'p',x:'A UI é <b>função do estado</b>. Quando um <code>State</code> lido por um composable muda, o Compose <b>recompõe</b> apenas os composables que leem aquele estado. Recomposição é frequente, pode ser fora de ordem e pode ser descartada — então composables devem ser <b>sem efeitos colaterais</b> e idempotentes.'},
+    {t:'p',x:'A UI é <b>função do estado</b>. Quando um <code>State</code> lido por um composable muda, o Compose <b>recompõe</b> só os composables que leem aquele estado (recomposição inteligente por escopo). Recomposição é frequente, pode rodar <b>fora de ordem</b>, em paralelo, e pode ser <b>descartada</b> — por isso um composable deve ser <b>sem efeitos colaterais</b> e idempotente.'},
     {t:'h',x:'Estado: remember, mutableStateOf, rememberSaveable'},
     {t:'code',x:'<span class="cm">// estado "hasteado": o pai guarda, o filho é stateless</span>\n<span class="kw">@Composable</span>\n<span class="kw">fun</span> Contador() {\n  <span class="kw">var</span> n <span class="kw">by</span> rememberSaveable { mutableStateOf(0) } <span class="cm">// sobrevive à rotação</span>\n  Botao(texto = <span class="cm">"Cliques: $n"</span>, onClick = { n++ })\n}\n\n<span class="kw">@Composable</span>\n<span class="kw">fun</span> Botao(texto: String, onClick: () -&gt; Unit) =\n  Button(onClick = onClick) { Text(texto) }'},
-    {t:'key',x:['<code>mutableStateOf</code> cria estado observável; ler dispara recomposição quando muda.','<code>remember</code> guarda o valor <b>entre recomposições</b> (não recria a cada frame) — mas perde na recriação da Activity.','<code>rememberSaveable</code> sobrevive à <b>recriação (config change / process death)</b> via Bundle.']},
     {t:'cmp',head:['','remember','rememberSaveable'],rows:[
       ['Entre recomposições','Mantém','Mantém'],
       ['Config change / process death','<b>Perde</b>','<b>Sobrevive</b> (Bundle)'],
       ['Tipo','Qualquer','Precisa ser Saveable/Parcelable']
     ]},
+    {t:'key',x:['<code>mutableStateOf</code> cria estado observável; <b>ler</b> agenda recomposição quando muda.','<code>remember(key)</code> re-inicializa quando a key muda — útil para recalcular derivados de um parâmetro.','Colete Flow com <code>collectAsStateWithLifecycle()</code> (não <code>collectAsState()</code>) para não coletar em background.']},
+    {t:'h',x:'State hoisting & fonte única'},
+    {t:'p',x:'<b>State hoisting</b>: suba o estado para o pai e passe <code>value</code> + <code>onValueChange</code> para o filho → composable <b>stateless</b>, reutilizável e testável. Isso realiza o UDF (estado desce, evento sobe) e garante <b>uma única fonte</b> para cada pedaço de estado. Estado que a UI só apresenta mora no <b>ViewModel</b>; estado puramente de UI (ex.: expandido/colapsado) pode ficar no composable.'},
     {t:'h',x:'Side-effects: use o certo'},
-    {t:'cmp',head:['Efeito','Quando'],rows:[
+    {t:'cmp',head:['Efeito','Quando usar'],rows:[
       ['<code>LaunchedEffect(key)</code>','Rodar suspend ligado à composição; re-executa se a key muda'],
       ['<code>rememberCoroutineScope</code>','Disparar corrotina a partir de callback (onClick)'],
-      ['<code>DisposableEffect</code>','Registrar e <b>limpar</b> (listener, callback) com onDispose'],
-      ['<code>SideEffect</code>','Publicar estado do Compose para código não-Compose a cada recomposição bem-sucedida'],
-      ['<code>derivedStateOf</code>','Derivar estado de outro state sem recompor a cada mudança irrelevante'],
+      ['<code>DisposableEffect</code>','Registrar e <b>limpar</b> (listener) com <code>onDispose</code>'],
+      ['<code>SideEffect</code>','Publicar estado do Compose para código não-Compose a cada recomposição'],
+      ['<code>produceState</code>','Converter fonte não-Compose (Flow/callback) em State'],
       ['<code>snapshotFlow</code>','Converter State em Flow']
     ]},
-    {t:'h',x:'Performance: estabilidade e listas'},
-    {t:'key',x:['Um composable é <b>skippable</b> (pode pular recomposição) se seus parâmetros são <b>estáveis</b>. Marque modelos com <code>@Immutable</code>/<code>@Stable</code>; uma <code>List</code> mutável é instável — prefira tipos imutáveis.','Em <code>LazyColumn</code>, forneça <code>key = { it.id }</code>: sem key, reordenar/remover recompõe itens errados e embaralha estado.','<code>derivedStateOf</code> evita recomposição por frame (ex.: "mostrar botão voltar ao topo" derivado do scroll).','Evite alocar lambdas/objetos novos a cada recomposição em hot paths.']},
-    {t:'call',title:'Ordem do Modifier importa',x:'<code>Modifier.padding(16).background(Red)</code> ≠ <code>Modifier.background(Red).padding(16)</code>. O primeiro deixa o padding <b>fora</b> do vermelho; o segundo pinta o vermelho e depois afasta o conteúdo. Modifier é aplicado em ordem, encadeado.'},
-    {t:'real',x:'Lista de faturas que "pisca" e perde o estado de expandido ao rolar? Quase sempre falta <code>key</code> no LazyColumn e o item data class não é estável. Corrige com key por id + <code>@Immutable</code> no modelo.'}
+    {t:'call',title:'LaunchedEffect vs rememberCoroutineScope',x:'<code>LaunchedEffect</code> é para efeito atrelado à composição (cancela ao sair, re-executa por key). <code>rememberCoroutineScope</code> é para disparar corrotina de um <b>evento</b> (onClick). Trocar os dois causa efeito disparado fora de hora ou cancelado cedo — pega em code review.'},
+    {t:'h',x:'Estabilidade & skippable'},
+    {t:'p',x:'Um composable é <b>skippable</b> (pula recomposição quando os pais recompõem) se todos os parâmetros são <b>estáveis</b> e não mudaram. Instabilidade força recomposição desnecessária.'},
+    {t:'key',x:['Marque modelos com <code>@Immutable</code>/<code>@Stable</code> quando você garante que não mudam por baixo.','Uma <code>List</code> mutável é <b>instável</b> — use tipos imutáveis (ex.: <code>ImmutableList</code> do kotlinx.collections.immutable) ou o <b>strong skipping mode</b>.','Classes de módulos que o compilador não enxerga (libs externas) contam como instáveis — envolva ou anote.']},
+    {t:'h',x:'Listas: keys e derivedStateOf'},
+    {t:'code',x:'LazyColumn {\n  items(faturas, key = { it.id }) { f -&gt;   <span class="cm">// identidade estável</span>\n    FaturaRow(f)\n  }\n}\n<span class="cm">// só recompõe quando o booleano MUDA, não a cada pixel de scroll</span>\n<span class="kw">val</span> mostrarTopo <span class="kw">by</span> remember {\n  derivedStateOf { listState.firstVisibleItemIndex &gt; 0 }\n}'},
+    {t:'key',x:['Sem <code>key</code>, reordenar/remover recompõe itens errados e embaralha o estado (o pisca clássico).','<code>derivedStateOf</code> evita recomposição por frame quando o resultado derivado muda raramente.','Evite <b>alocar</b> lambdas/objetos novos por recomposição em hot paths.']},
+    {t:'h',x:'Modifier: a ordem importa'},
+    {t:'p',x:'O <code>Modifier</code> é aplicado <b>na ordem</b> em que você encadeia. <code>Modifier.padding(16).background(Red)</code> deixa o padding <b>fora</b> do vermelho; <code>Modifier.background(Red).padding(16)</code> pinta o vermelho e depois afasta o conteúdo. Trocar a ordem muda o resultado visual e a área de clique.'},
+    {t:'h',x:'CompositionLocal & performance real'},
+    {t:'p',x:'<b>CompositionLocal</b> passa valores implicitamente pela árvore (tema, densidade) sem terem que descer por parâmetro em cada nível — bom para dados ambientais, ruim para dados que a tela realmente depende (esses devem ser explícitos).'},
+    {t:'real',x:'Lista de faturas que "pisca" e perde o estado de expandido ao rolar? Quase sempre falta <code>key</code> no LazyColumn e o item não é estável. Corrige com key por id + modelo <code>@Immutable</code>. Meça recomposições no <b>Layout Inspector</b> e acelere o startup/scroll com <b>baseline profiles</b> — não otimize no chute.'}
   ],
   quiz:[
     {type:'trap',q:'Um <code>TextField</code> perde o texto digitado quando o usuário gira a tela. O estado usa <code>remember { mutableStateOf("") }</code>. Qual a correção?',
@@ -940,28 +952,45 @@ const MODULES = [
   subtitle:'Todo app reativo vive de coroutines e Flow. Estas são as armadilhas de concorrência que aparecem em bugs de produção e em perguntas capciosas de entrevista.',
   xp:60,
   lesson:[
+    {t:'h',x:'Suspend: concorrência que não bloqueia'},
+    {t:'p',x:'Uma corrotina é uma computação <b>leve e suspensível</b>: uma <code>suspend fun</code> pode <b>pausar</b> (num ponto de suspensão) e liberar a thread para outro trabalho, retomando depois — sem bloquear. Milhares de corrotinas rodam sobre poucas threads. Isso é o que deixa a UI fluida enquanto o I/O acontece.'},
     {t:'h',x:'Structured concurrency & Jobs'},
-    {t:'p',x:'Corrotinas vivem num <code>CoroutineScope</code> com um <code>Job</code>. Com um <b>Job</b> normal, se um filho falha, ele cancela o pai e os irmãos. Com <b>SupervisorJob</b> (ex.: <code>supervisorScope</code>), a falha de um filho <b>não</b> derruba os irmãos — cada um falha isolado.'},
-    {t:'cmp',head:['','Job','SupervisorJob'],rows:[
+    {t:'p',x:'Corrotinas vivem num <code>CoroutineScope</code> com um <code>Job</code> que forma uma <b>hierarquia</b> pai-filho. Cancelar o pai cancela os filhos; o pai só termina quando os filhos terminam. Com um <b>Job</b> normal, a falha de um filho cancela pai e irmãos; com <b>SupervisorJob</b> (via <code>supervisorScope</code>), a falha de um filho <b>não</b> derruba os irmãos.'},
+    {t:'cmp',head:['','coroutineScope (Job)','supervisorScope (SupervisorJob)'],rows:[
       ['Falha de um filho','Cancela pai e irmãos','Isola — irmãos seguem'],
-      ['Uso típico','Trabalho tudo-ou-nada','Telas com várias fontes independentes']
+      ['Uso típico','Trabalho tudo-ou-nada','Tela com várias fontes independentes']
+    ]},
+    {t:'h',x:'Escopos no Android'},
+    {t:'key',x:['<code>viewModelScope</code> — cancela quando o ViewModel é limpo. O padrão para lógica de tela.','<code>lifecycleScope</code> — atrelado ao lifecycle da Activity/Fragment.','<code>rememberCoroutineScope()</code> — para disparar de callbacks no Compose.','<b>Evite <code>GlobalScope</code></b>: sem dono, vira leak e trabalho órfão — quebra a structured concurrency.']},
+    {t:'h',x:'Dispatchers & withContext'},
+    {t:'p',x:'O <b>dispatcher</b> decide em qual thread/pool a corrotina roda. Troque de contexto com <code>withContext</code> — nunca bloqueie a Main.'},
+    {t:'cmp',head:['Dispatcher','Para quê'],rows:[
+      ['<code>Main</code>','UI e atualização de estado'],
+      ['<code>IO</code>','Rede, disco, banco (I/O-bound)'],
+      ['<code>Default</code>','CPU-bound (parse, sort, cálculo)'],
+      ['<code>Main.immediate</code>','Evita re-despacho quando já está na Main']
     ]},
     {t:'h',x:'Exceções: onde são pegas'},
-    {t:'key',x:['<code>launch</code>: exceção propaga; um <code>CoroutineExceptionHandler</code> no scope pode tratá-la.','<code>async</code>: exceção fica no <code>Deferred</code> e só estoura no <code>await()</code> — trate com try/catch em volta do await.','Cancelamento (<code>CancellationException</code>) é normal: <b>não</b> engula num catch genérico — re-lance.','Limpeza que precisa rodar mesmo cancelado vai em <code>withContext(NonCancellable)</code>.']},
-    {t:'h',x:'Flow: operadores que caem em prova'},
-    {t:'code',x:'<span class="cm">// typeahead sem race: cada tecla cancela a busca anterior</span>\n<span class="kw">val</span> resultados = queryFlow\n  .debounce(300)\n  .flatMapLatest { q -&gt; repo.buscar(q) }   <span class="cm">// cancela a busca antiga</span>\n  .flowOn(Dispatchers.IO)\n  .catch { emit(emptyList()) }\n  .stateIn(scope, WhileSubscribed(5000), emptyList())'},
+    {t:'key',x:['<code>launch</code>: a exceção propaga; um <code>CoroutineExceptionHandler</code> na corrotina <b>raiz</b> pode tratá-la.','<code>async</code>: a exceção fica no <code>Deferred</code> e só estoura no <code>await()</code> — trate com try/catch em volta do await.','O handler <b>não</b> pega exceção de <code>async</code> filho — só de corrotinas raiz iniciadas com <code>launch</code>.','<code>CancellationException</code> é <b>normal</b>: nunca engula num catch genérico — re-lance.']},
+    {t:'h',x:'Cancelamento cooperativo'},
+    {t:'p',x:'Cancelamento não é forçado: o código precisa <b>cooperar</b>. Funções suspensas da lib já checam; código pesado e síncrono ignora o cancelamento até você checar explicitamente.'},
+    {t:'code',x:'<span class="kw">suspend fun</span> processar(itens: List&lt;Item&gt;) {\n  itens.forEach {\n    ensureActive()          <span class="cm">// aborta se o escopo foi cancelado</span>\n    pesado(it)\n  }\n}\n<span class="cm">// limpeza que PRECISA rodar mesmo cancelado:</span>\nwithContext(NonCancellable) { fecharRecursos() }'},
+    {t:'h',x:'Flow: cold vs hot & operadores'},
+    {t:'p',x:'Um <code>Flow</code> é <b>frio</b> por padrão: re-executa o upstream a cada coletor. <code>StateFlow</code>/<code>SharedFlow</code> são <b>hot</b> e multicast. Operadores comuns:'},
     {t:'cmp',head:['Operador','O que faz'],rows:[
       ['<code>map/filter</code>','Transforma/filtra'],
-      ['<code>flatMapLatest</code>','Cancela o flow interno anterior quando chega novo valor (busca/typeahead)'],
+      ['<code>flatMapLatest</code>','Cancela o flow interno anterior ao chegar novo valor (typeahead)'],
       ['<code>combine</code>','Combina o último de vários flows'],
-      ['<code>flowOn(IO)</code>','Muda o dispatcher do <b>upstream</b>'],
+      ['<code>flowOn(IO)</code>','Muda o dispatcher do <b>upstream</b> (não do coletor)'],
       ['<code>catch</code>','Trata exceção do upstream'],
       ['<code>stateIn/shareIn</code>','Torna hot/multicast']
     ]},
+    {t:'code',x:'<span class="cm">// typeahead sem race: cada tecla cancela a busca anterior</span>\n<span class="kw">val</span> resultados = queryFlow\n  .debounce(300)\n  .flatMapLatest { q -&gt; repo.buscar(q) }   <span class="cm">// cancela a busca antiga</span>\n  .flowOn(Dispatchers.IO)\n  .catch { emit(emptyList()) }\n  .stateIn(scope, WhileSubscribed(5000), emptyList())'},
     {t:'h',x:'Backpressure: buffer, conflate, collectLatest'},
-    {t:'key',x:['<code>buffer()</code> — produtor e consumidor rodam concorrentes; guarda itens.','<code>conflate()</code> — descarta intermediários, mantém só o mais recente.','<code>collectLatest { }</code> — cancela o processamento do item anterior se chega um novo.']},
-    {t:'real',x:'Campo de busca que dispara request a cada tecla e mostra resultado de query antiga? Use <code>flatMapLatest</code>: cada novo texto cancela a busca anterior, então só o resultado da última query sobrevive. É o antídoto clássico de race condition em typeahead.'},
-    {t:'call',title:'Pegadinha do async',x:'Um <code>CoroutineExceptionHandler</code> <b>não</b> captura exceção de <code>async</code> — ela é entregue no <code>await()</code>. Handlers só valem para corrotinas "raiz" iniciadas com <code>launch</code>.'}
+    {t:'key',x:['<code>buffer()</code> — produtor e consumidor concorrem; guarda itens numa fila.','<code>conflate()</code> — descarta intermediários, mantém só o mais recente.','<code>collectLatest { }</code> — cancela o processamento do item anterior se chega um novo.']},
+    {t:'h',x:'stateIn/shareIn & SharingStarted'},
+    {t:'p',x:'Ao expor um Flow como estado, <code>WhileSubscribed(5000)</code> mantém o upstream ativo por 5s após o último coletor — sobrevive a uma rotação (evita re-buscar) mas para quando a tela realmente sai. <code>Eagerly</code>/<code>Lazily</code> nunca param sozinhos. É a diferença entre uma tela econômica e uma que refaz rede à toa.'},
+    {t:'real',x:'Campo de busca que mostra resultado de query antiga? <code>flatMapLatest</code>: cada texto novo cancela a busca anterior — só a última sobrevive. Race condition de typeahead resolvida na origem, não com if de "chegou tarde".'}
   ],
   quiz:[
     {type:'cmp',q:'Numa tela que carrega perfil, ofertas e saldo em paralelo, você quer que a falha de <b>uma</b> fonte não cancele as outras. O que usar?',
