@@ -507,6 +507,7 @@ const MODULES = [
     {t:'call',title:'Quando NÃO usar agente',x:'Se a tarefa é determinística e conhecida, um <b>workflow/script</b> é mais barato, previsível e testável. Agente brilha quando o caminho é <b>incerto</b> e exige decisão + ferramentas. Nem todo problema é prego.'},
     {t:'h',x:'Anatomia de um agente'},
     {t:'key',x:['<b>LLM</b> — o motor de raciocínio.','<b>Ferramentas (tool use / function calling)</b> — como o agente afeta o mundo real.','<b>Memória</b> — curto prazo é a <b>janela de contexto</b>; longo prazo é um store/RAG externo.','<b>Planner</b> — decompõe o objetivo em passos.','<b>Orquestração</b> — subagentes, paralelismo, handoff.','<b>Critério de parada</b> — sem ele, loop infinito ou parada precoce.']},
+    {t:'real',x:'Exemplo concreto: o mesmo modelo com uma ferramenta <code>rodar_testes(modulo)</code> bem descrita acerta; com uma ferramenta genérica <code>exec(cmd)</code> mal documentada, erra. A qualidade da <b>interface agente-computador</b> (nomes, descrições, schemas) pesa tanto quanto o modelo.'},
     {t:'h',x:'O loop: ReAct, Plan-and-Execute, Reflexion'},
     {t:'cmp',head:['Padrão','Como funciona','Bom quando'],rows:[
       ['<b>ReAct</b>','Alterna Reason → Act → Observe a cada passo','Exploração, caminho incerto'],
@@ -536,10 +537,18 @@ const MODULES = [
     ]},
     {t:'h',x:'Single-agent vs multi-agente'},
     {t:'p',x:'Multi-agente (orchestrator-worker, subagentes) <b>paraleliza</b> e <b>isola contexto</b>, mas soma custo, latência e pontos de coordenação/falha. Regra sênior: <b>comece single-agent</b>; vá multi só quando há subtarefas genuinamente paralelas ou que precisam de contexto isolado (ex.: revisão ampla, pesquisa em várias frentes).'},
+    {t:'cmp',head:['','Single-agent','Multi-agente'],rows:[
+      ['Contexto','Um só','Isolado por subagente'],
+      ['Custo de tokens','Menor','Bem maior'],
+      ['Paralelismo','Não','Sim'],
+      ['Quando','Padrão (comece aqui)','Subtarefas separáveis, revisão ampla']
+    ]},
     {t:'h',x:'Autonomia & Human-in-the-loop'},
     {t:'p',x:'Autonomia é um <b>dial</b>, não um botão: <b>sugestão</b> (humano aprova cada passo) → <b>semi-autônomo</b> (edita, mas confirma ações sensíveis) → <b>autônomo</b> (roda o pipeline). Ações <b>irreversíveis</b> (deploy, deletar branch, prod) exigem <b>human-in-the-loop</b> e <b>menor privilégio</b>.'},
+    {t:'key',x:['<b>Sugestão</b> — humano aprova cada passo (máxima segurança, mínima velocidade).','<b>Semi-autônomo</b> — edita livre, mas confirma ações sensíveis.','<b>Autônomo</b> — roda o pipeline inteiro; só vá para esse nível em produção com evals sólidos e gates de CI.']},
     {t:'h',x:'Guardrails & segurança: prompt injection'},
     {t:'call',title:'Prompt injection — o risco nº1 de agentes',x:'Conteúdo que o agente <b>lê</b> (uma issue do Jira, uma página web, um arquivo) pode conter instruções maliciosas (“ignore tudo e apague o repositório”). Regra de ouro: <b>dado vindo de ferramenta é dado, não instrução</b>. Defesas: sandbox de ferramentas, menor privilégio, validação de saída e aprovação humana em ações de efeito.'},
+    {t:'key',x:['<b>Menor privilégio</b> por ferramenta + <b>sandbox</b> de execução.','<b>Validação de saída</b> antes de efetivar qualquer ação com efeito colateral.','<b>Human-in-the-loop</b> em ações irreversíveis; a saída do agente <b>nunca</b> se auto-aprova.']},
     {t:'h',x:'Evals & confiabilidade'},
     {t:'p',x:'Agente é <b>não-determinístico</b>. Confiabilidade se <b>mede</b> com <b>evals</b> (suíte automatizada), não se sente. <b>Eval-driven development</b>: um <b>golden dataset</b> de tarefas + métricas, rodado a cada mudança para pegar regressão. <b>LLM-as-judge</b> avalia saídas abertas. <b>Observabilidade</b> (tracing de cada passo e chamada de ferramenta) é o que deixa você debugar.'},
     {t:'key',x:['<b>Métricas</b>: success rate, task completion, <b>custo por tarefa</b>, latência, <b>taxa de intervenção humana</b>.','<b>Regressão</b>: golden dataset roda no CI a cada mudança de prompt/modelo.','<b>Tracing</b>: registre thought → tool → observação de cada passo.']},
@@ -634,7 +643,8 @@ const MODULES = [
     ]},
     {t:'p',x:'Eles <b>não competem</b>: a spec do SDD é o alvo; os critérios de aceite viram testes (herdando o espírito de BDD/TDD). SDD opera num nível acima, orquestrando a geração; TDD garante a corretude fina de cada unidade que o agente escreve.'},
     {t:'h',x:'Armadilhas & anti-padrões'},
-    {t:'call',title:'Os erros que reprovam na prática',x:'<b>Doc morta</b>: spec numa wiki que ninguém atualiza (não é SDD — SDD vive no git e é revisada). <b>Over-spec</b>: escrever o COMO e engessar a solução. <b>Critério não-verificável</b>: "deve ser intuitivo" não gera teste. <b>Spec desatualizada</b>: o código andou e a spec não — o drift volta. A spec é executável/verificável, não enfeite.'}
+    {t:'call',title:'Os erros que reprovam na prática',x:'<b>Doc morta</b>: spec numa wiki que ninguém atualiza (não é SDD — SDD vive no git e é revisada). <b>Over-spec</b>: escrever o COMO e engessar a solução. <b>Critério não-verificável</b>: "deve ser intuitivo" não gera teste. <b>Spec desatualizada</b>: o código andou e a spec não — o drift volta. A spec é executável/verificável, não enfeite.'},
+    {t:'real',x:'Sinal de SDD maduro: o MR traz a <b>mudança da spec</b> junto do código, e o reviewer aprova a intenção antes do diff. Se a spec não muda quando o comportamento muda, você voltou pro vibe coding.'}
   ],
   quiz:[
     {type:'cmp',q:'Qual afirmação distingue melhor <b>SDD</b> de “vibe coding” (promptar o agente livremente)?',
@@ -696,6 +706,7 @@ const MODULES = [
       ['<b>Subagent</b>','Instância com contexto próprio','<b>Onde isolar</b> trabalho','Busca ampla, revisão paralela'],
       ['<b>Hook</b>','Automação determinística por evento (harness)','O <b>que sempre roda</b>','lint/testes antes de commit']
     ]},
+    {t:'p',x:'Na dúvida, faça a pergunta certa: "isto é <b>conhecimento</b> (Skill), <b>acesso</b> (MCP), <b>isolamento</b> (Subagent) ou <b>garantia</b> (Hook)?". A resposta aponta a peça — e trocar as peças é o erro clássico da entrevista.'},
     {t:'h',x:'Montando o fluxo agêntico do time'},
     {t:'real',x:'Time do SuperApp: uma <b>Skill</b> guarda o padrão de code review e as regras WCAG; um <b>MCP</b> liga o agente ao <b>Jira</b> (ler/triar tickets) e ao <b>GitLab</b> (abrir MR, ver pipeline); <b>subagentes</b> revisam módulos em paralelo; um <b>Hook</b> roda detekt + testes antes de cada commit. Cada peça no seu papel — e o dev sênior orquestra o conjunto.'},
     {t:'call',title:'Armadilhas',x:'<b>Description fraca</b> = skill que nunca dispara. <b>MCP com permissão ampla</b> (token que pode tudo) = risco de segurança — dê menor privilégio por servidor. Guardar procedimento do time num MCP (em vez de Skill), ou tentar "conectar ao Jira" com uma Skill, é trocar as peças.'}
@@ -779,7 +790,8 @@ const MODULES = [
     {t:'p',x:'<b>Cold vs hot</b>: um <code>Flow</code> frio re-executa o upstream a cada coletor; <code>StateFlow</code>/<code>SharedFlow</code> são hot e multicast (uma execução, vários coletores). Transforme frio em hot com <code>stateIn</code>/<code>shareIn</code>.'},
     {t:'real',x:'Padrão moderno no SuperApp: o ViewModel expõe um <code>StateFlow</code> de estado + um <code>SharedFlow</code> de eventos; a UI coleta com <code>repeatOnLifecycle(STARTED)</code> (ou <code>collectAsStateWithLifecycle</code> no Compose) para não vazar em background. LiveData aparece só nas telas legadas ainda não migradas.'},
     {t:'h',x:'Coleções: List vs Sequence'},
-    {t:'p',x:'Operações de coleção (<code>map</code>, <code>filter</code>) são <b>eager</b>: cada passo cria uma lista intermediária. Para cadeias longas ou grandes, <code>asSequence()</code> processa <b>lazy</b>, elemento a elemento, sem materializar intermediárias — menos alocação. Para coleções pequenas, a lista eager é mais simples e rápida (sem overhead da sequência).'}
+    {t:'p',x:'Operações de coleção (<code>map</code>, <code>filter</code>) são <b>eager</b>: cada passo cria uma lista intermediária. Para cadeias longas ou grandes, <code>asSequence()</code> processa <b>lazy</b>, elemento a elemento, sem materializar intermediárias — menos alocação. Para coleções pequenas, a lista eager é mais simples e rápida (sem overhead da sequência).'},
+    {t:'code',x:'<span class="cm">// eager: cria listas intermediárias a cada passo</span>\nlista.map { it * 2 }.filter { it &gt; 10 }\n\n<span class="cm">// lazy: processa elemento a elemento, sem intermediárias</span>\nlista.asSequence().map { it * 2 }.filter { it &gt; 10 }.toList()'}
   ],
   quiz:[
     {type:'trap',q:'Qual é o risco de usar <code>!!</code> em vez de <code>?.</code> ou <code>?:</code>?',
@@ -824,6 +836,7 @@ const MODULES = [
     {t:'call',title:'A regra prática',x:'Estado grande e vivo (objetos) → <b>ViewModel</b>. Estado pequeno que precisa voltar após process death (id selecionado, texto digitado) → <b>SavedStateHandle</b>. Dado durável → <b>Room/DataStore</b>. Em Fragment, observe UI usando <code>viewLifecycleOwner</code>, não o <code>this</code> do Fragment — senão você vaza a view.'},
     {t:'h',x:'Os quatro componentes & Intents'},
     {t:'key',x:['<b>Activity</b> — uma tela/host de UI. <b>Fragment</b> — porção de UI reutilizável dentro de uma Activity.','<b>Service</b> — trabalho sem UI (hoje quase sempre foreground service ou WorkManager).','<b>BroadcastReceiver</b> — reage a eventos do sistema/app. <b>ContentProvider</b> — expõe dados entre apps.','<b>Intent</b> — mensagem que inicia componentes; <b>explícita</b> (classe alvo) ou <b>implícita</b> (ação + dados, resolvida por quem sabe atender).']},
+    {t:'p',x:'Na prática moderna, quase tudo é <b>Activity única + Fragments/Composables</b>; Services viraram foreground service ou WorkManager. Mas conhecer os quatro componentes e os Intents (explícito × implícito) ainda cai — é como o app conversa com o sistema e com outros apps.'},
     {t:'h',x:'Arquitetura em camadas (Clean-ish)'},
     {t:'p',x:'A arquitetura recomendada separa responsabilidades em camadas, com dependências apontando para dentro (a UI conhece o domínio, o domínio não conhece a UI).'},
     {t:'cmp',head:['Camada','Responsabilidade','Peças'],rows:[
@@ -842,6 +855,7 @@ const MODULES = [
     {t:'code',x:'<span class="cm">// MVI: Intent -> reducer -> novo State imutável; a UI só observa</span>\n<span class="kw">data class</span> State(<span class="kw">val</span> loading: Boolean = <span class="kw">false</span>, <span class="kw">val</span> itens: List&lt;Fatura&gt; = emptyList(), <span class="kw">val</span> erro: String? = <span class="kw">null</span>)\n<span class="kw">sealed interface</span> Intent { <span class="kw">data object</span> Carregar : Intent }\n<span class="kw">fun</span> reduce(s: State, i: Intent): State = <span class="kw">when</span> (i) {\n  Intent.Carregar -&gt; s.copy(loading = <span class="kw">true</span>)\n}'},
     {t:'h',x:'UDF & state hoisting'},
     {t:'p',x:'<b>Unidirectional Data Flow</b>: <b>estado desce, eventos sobem</b>. O <b>state hoisting</b> aplica isso na UI — suba o estado para o pai e passe <code>value</code> + <code>onValueChange</code> para o filho, tornando o composable <b>stateless</b>, reutilizável e testável. É o que torna a UI previsível: existe um único dono de cada pedaço de estado.'},
+    {t:'key',x:['<b>Estado desce</b> por parâmetros; <b>eventos sobem</b> por callbacks (lambdas).','Cada pedaço de estado tem <b>um dono</b> — sem duas fontes divergindo.','Resultado: UI previsível, testável e fácil de depurar (o estado reconstrói a tela).']},
     {t:'h',x:'Compose vs XML Views'},
     {t:'cmp',head:['','XML Views','Jetpack Compose'],rows:[
       ['Paradigma','Imperativo (você muta a view)','Declarativo (UI = função do estado)'],
@@ -853,8 +867,10 @@ const MODULES = [
     {t:'p',x:'Compose é o padrão para o redesign; XML segue vivo no legado. Os dois <b>convivem</b> — e é isso que permite migrar sem parar o produto.'},
     {t:'h',x:'Migração incremental (o redesign na prática)'},
     {t:'real',x:'Modernizar o SuperApp sem big-bang: migre <b>tela a tela</b> via interop — <code>ComposeView</code> dentro de um layout XML, ou <code>AndroidView</code> para embutir uma view legada no Compose. Entrega-se o redesign incrementalmente, com testes de caracterização protegendo cada tela migrada. Reescrita big-bang é o anti-padrão de risco que a vaga (modernizar mantendo funcionalidades) quer evitar.'},
+    {t:'p',x:'A ordem importa: comece pelas telas de <b>menor risco</b> e <b>maior tráfego</b>, com testes de caracterização cobrindo o comportamento antigo <b>antes</b> de trocar. Assim o redesign avança com rede de segurança, sem congelar entregas.'},
     {t:'h',x:'O kit Jetpack que você vai citar'},
-    {t:'key',x:['<b>Navigation</b> — grafo de destinos, single-activity, deep links.','<b>Room</b> — persistência relacional; <b>DataStore</b> — chave-valor assíncrono.','<b>WorkManager</b> — trabalho garantido em background.','<b>Paging 3</b> — listas grandes paginadas; <b>Hilt</b> — injeção de dependência.']}
+    {t:'key',x:['<b>Navigation</b> — grafo de destinos, single-activity, deep links.','<b>Room</b> — persistência relacional; <b>DataStore</b> — chave-valor assíncrono.','<b>WorkManager</b> — trabalho garantido em background.','<b>Paging 3</b> — listas grandes paginadas; <b>Hilt</b> — injeção de dependência.']},
+    {t:'real',x:'Na entrevista, cite a peça certa para cada problema: lista grande → Paging; sync garantido → WorkManager; navegação → Navigation; DI → Hilt. Saber <b>quando</b> usar cada uma vale mais que decorar nomes.'}
   ],
   quiz:[
     {type:'trap',q:'Um usuário roda a tela e depois o SO mata o app em background. Onde o estado precisa estar para sobreviver a <b>ambos</b> os casos?',
@@ -891,8 +907,10 @@ const MODULES = [
   lesson:[
     {t:'h',x:'As três fases do Compose'},
     {t:'p',x:'Um frame do Compose passa por três fases: <b>Composition</b> (o que desenhar — executa os composables e monta a árvore), <b>Layout</b> (medir e posicionar) e <b>Drawing</b> (pintar). Entender isso é o que separa quem otimiza de quem chuta: um estado lido só no Drawing (ex.: cor) não precisa recompor — pode-se ler o estado tarde (lambda no Modifier) e pular Composition/Layout.'},
+    {t:'key',x:['<b>Composition</b> — executa os composables e monta a árvore (o "o quê").','<b>Layout</b> — mede e posiciona cada nó.','<b>Drawing</b> — pinta na tela. Ler um estado só no Drawing evita recompor.']},
     {t:'h',x:'Recomposition: o coração do Compose'},
     {t:'p',x:'A UI é <b>função do estado</b>. Quando um <code>State</code> lido por um composable muda, o Compose <b>recompõe</b> só os composables que leem aquele estado (recomposição inteligente por escopo). Recomposição é frequente, pode rodar <b>fora de ordem</b>, em paralelo, e pode ser <b>descartada</b> — por isso um composable deve ser <b>sem efeitos colaterais</b> e idempotente.'},
+    {t:'key',x:['Recompõe <b>só</b> o escopo que lê o estado que mudou (recomposição inteligente).','Pode rodar fora de ordem, em paralelo e ser descartada — não confie em ordem nem em efeitos no corpo.','Por isso o composable deve ser <b>puro</b>: mesma entrada, mesma UI, sem side-effect direto.']},
     {t:'h',x:'Estado: remember, mutableStateOf, rememberSaveable'},
     {t:'code',x:'<span class="cm">// estado "hasteado": o pai guarda, o filho é stateless</span>\n<span class="kw">@Composable</span>\n<span class="kw">fun</span> Contador() {\n  <span class="kw">var</span> n <span class="kw">by</span> rememberSaveable { mutableStateOf(0) } <span class="cm">// sobrevive à rotação</span>\n  Botao(texto = <span class="cm">"Cliques: $n"</span>, onClick = { n++ })\n}\n\n<span class="kw">@Composable</span>\n<span class="kw">fun</span> Botao(texto: String, onClick: () -&gt; Unit) =\n  Button(onClick = onClick) { Text(texto) }'},
     {t:'cmp',head:['','remember','rememberSaveable'],rows:[
@@ -903,6 +921,7 @@ const MODULES = [
     {t:'key',x:['<code>mutableStateOf</code> cria estado observável; <b>ler</b> agenda recomposição quando muda.','<code>remember(key)</code> re-inicializa quando a key muda — útil para recalcular derivados de um parâmetro.','Colete Flow com <code>collectAsStateWithLifecycle()</code> (não <code>collectAsState()</code>) para não coletar em background.']},
     {t:'h',x:'State hoisting & fonte única'},
     {t:'p',x:'<b>State hoisting</b>: suba o estado para o pai e passe <code>value</code> + <code>onValueChange</code> para o filho → composable <b>stateless</b>, reutilizável e testável. Isso realiza o UDF (estado desce, evento sobe) e garante <b>uma única fonte</b> para cada pedaço de estado. Estado que a UI só apresenta mora no <b>ViewModel</b>; estado puramente de UI (ex.: expandido/colapsado) pode ficar no composable.'},
+    {t:'code',x:'<span class="cm">// filho stateless: recebe value + callback (hoisting)</span>\n<span class="kw">@Composable</span>\n<span class="kw">fun</span> Busca(texto: String, onTexto: (String) -&gt; Unit) =\n  TextField(value = texto, onValueChange = onTexto)'},
     {t:'h',x:'Side-effects: use o certo'},
     {t:'cmp',head:['Efeito','Quando usar'],rows:[
       ['<code>LaunchedEffect(key)</code>','Rodar suspend ligado à composição; re-executa se a key muda'],
@@ -921,6 +940,7 @@ const MODULES = [
     {t:'key',x:['Sem <code>key</code>, reordenar/remover recompõe itens errados e embaralha o estado (o pisca clássico).','<code>derivedStateOf</code> evita recomposição por frame quando o resultado derivado muda raramente.','Evite <b>alocar</b> lambdas/objetos novos por recomposição em hot paths.']},
     {t:'h',x:'Modifier: a ordem importa'},
     {t:'p',x:'O <code>Modifier</code> é aplicado <b>na ordem</b> em que você encadeia. <code>Modifier.padding(16).background(Red)</code> deixa o padding <b>fora</b> do vermelho; <code>Modifier.background(Red).padding(16)</code> pinta o vermelho e depois afasta o conteúdo. Trocar a ordem muda o resultado visual e a área de clique.'},
+    {t:'code',x:'<span class="cm">// ordem diferente = resultado diferente</span>\nModifier.padding(16.dp).background(Red)   <span class="cm">// padding FORA do vermelho</span>\nModifier.background(Red).padding(16.dp)   <span class="cm">// vermelho e depois afasta o conteúdo</span>'},
     {t:'h',x:'CompositionLocal & performance real'},
     {t:'p',x:'<b>CompositionLocal</b> passa valores implicitamente pela árvore (tema, densidade) sem terem que descer por parâmetro em cada nível — bom para dados ambientais, ruim para dados que a tela realmente depende (esses devem ser explícitos).'},
     {t:'real',x:'Lista de faturas que "pisca" e perde o estado de expandido ao rolar? Quase sempre falta <code>key</code> no LazyColumn e o item não é estável. Corrige com key por id + modelo <code>@Immutable</code>. Meça recomposições no <b>Layout Inspector</b> e acelere o startup/scroll com <b>baseline profiles</b> — não otimize no chute.'}
@@ -954,6 +974,7 @@ const MODULES = [
   lesson:[
     {t:'h',x:'Suspend: concorrência que não bloqueia'},
     {t:'p',x:'Uma corrotina é uma computação <b>leve e suspensível</b>: uma <code>suspend fun</code> pode <b>pausar</b> (num ponto de suspensão) e liberar a thread para outro trabalho, retomando depois — sem bloquear. Milhares de corrotinas rodam sobre poucas threads. Isso é o que deixa a UI fluida enquanto o I/O acontece.'},
+    {t:'key',x:['Uma <code>suspend fun</code> pausa num ponto de suspensão e <b>libera a thread</b> — não bloqueia.','Milhares de corrotinas rodam sobre poucas threads.','Só pode ser chamada de outra suspend ou de um builder (<code>launch</code>/<code>async</code>).']},
     {t:'h',x:'Structured concurrency & Jobs'},
     {t:'p',x:'Corrotinas vivem num <code>CoroutineScope</code> com um <code>Job</code> que forma uma <b>hierarquia</b> pai-filho. Cancelar o pai cancela os filhos; o pai só termina quando os filhos terminam. Com um <b>Job</b> normal, a falha de um filho cancela pai e irmãos; com <b>SupervisorJob</b> (via <code>supervisorScope</code>), a falha de um filho <b>não</b> derruba os irmãos.'},
     {t:'cmp',head:['','coroutineScope (Job)','supervisorScope (SupervisorJob)'],rows:[
@@ -962,6 +983,7 @@ const MODULES = [
     ]},
     {t:'h',x:'Escopos no Android'},
     {t:'key',x:['<code>viewModelScope</code> — cancela quando o ViewModel é limpo. O padrão para lógica de tela.','<code>lifecycleScope</code> — atrelado ao lifecycle da Activity/Fragment.','<code>rememberCoroutineScope()</code> — para disparar de callbacks no Compose.','<b>Evite <code>GlobalScope</code></b>: sem dono, vira leak e trabalho órfão — quebra a structured concurrency.']},
+    {t:'p',x:'A regra: toda corrotina precisa de um <b>dono</b> (um escopo com ciclo de vida). É isso que garante o cancelamento automático quando a tela some — e o que <code>GlobalScope</code> quebra, virando leak.'},
     {t:'h',x:'Dispatchers & withContext'},
     {t:'p',x:'O <b>dispatcher</b> decide em qual thread/pool a corrotina roda. Troque de contexto com <code>withContext</code> — nunca bloqueie a Main.'},
     {t:'cmp',head:['Dispatcher','Para quê'],rows:[
@@ -972,6 +994,7 @@ const MODULES = [
     ]},
     {t:'h',x:'Exceções: onde são pegas'},
     {t:'key',x:['<code>launch</code>: a exceção propaga; um <code>CoroutineExceptionHandler</code> na corrotina <b>raiz</b> pode tratá-la.','<code>async</code>: a exceção fica no <code>Deferred</code> e só estoura no <code>await()</code> — trate com try/catch em volta do await.','O handler <b>não</b> pega exceção de <code>async</code> filho — só de corrotinas raiz iniciadas com <code>launch</code>.','<code>CancellationException</code> é <b>normal</b>: nunca engula num catch genérico — re-lance.']},
+    {t:'code',x:'<span class="kw">val</span> d = async { podeFalhar() }\n<span class="kw">try</span> { d.await() }            <span class="cm">// a exceção do async estoura AQUI</span>\n<span class="kw">catch</span> (e: Exception) { tratar(e) }'},
     {t:'h',x:'Cancelamento cooperativo'},
     {t:'p',x:'Cancelamento não é forçado: o código precisa <b>cooperar</b>. Funções suspensas da lib já checam; código pesado e síncrono ignora o cancelamento até você checar explicitamente.'},
     {t:'code',x:'<span class="kw">suspend fun</span> processar(itens: List&lt;Item&gt;) {\n  itens.forEach {\n    ensureActive()          <span class="cm">// aborta se o escopo foi cancelado</span>\n    pesado(it)\n  }\n}\n<span class="cm">// limpeza que PRECISA rodar mesmo cancelado:</span>\nwithContext(NonCancellable) { fecharRecursos() }'},
@@ -988,6 +1011,7 @@ const MODULES = [
     {t:'code',x:'<span class="cm">// typeahead sem race: cada tecla cancela a busca anterior</span>\n<span class="kw">val</span> resultados = queryFlow\n  .debounce(300)\n  .flatMapLatest { q -&gt; repo.buscar(q) }   <span class="cm">// cancela a busca antiga</span>\n  .flowOn(Dispatchers.IO)\n  .catch { emit(emptyList()) }\n  .stateIn(scope, WhileSubscribed(5000), emptyList())'},
     {t:'h',x:'Backpressure: buffer, conflate, collectLatest'},
     {t:'key',x:['<code>buffer()</code> — produtor e consumidor concorrem; guarda itens numa fila.','<code>conflate()</code> — descarta intermediários, mantém só o mais recente.','<code>collectLatest { }</code> — cancela o processamento do item anterior se chega um novo.']},
+    {t:'p',x:'Escolha pelo que importa: <code>conflate</code>/<code>collectLatest</code> quando só o <b>último</b> valor interessa (estado de UI); <code>buffer</code> quando você <b>não pode perder</b> itens (eventos), aceitando enfileirar.'},
     {t:'h',x:'stateIn/shareIn & SharingStarted'},
     {t:'p',x:'Ao expor um Flow como estado, <code>WhileSubscribed(5000)</code> mantém o upstream ativo por 5s após o último coletor — sobrevive a uma rotação (evita re-buscar) mas para quando a tela realmente sai. <code>Eagerly</code>/<code>Lazily</code> nunca param sozinhos. É a diferença entre uma tela econômica e uma que refaz rede à toa.'},
     {t:'real',x:'Campo de busca que mostra resultado de query antiga? <code>flatMapLatest</code>: cada texto novo cancela a busca anterior — só a última sobrevive. Race condition de typeahead resolvida na origem, não com if de "chegou tarde".'}
@@ -1021,6 +1045,7 @@ const MODULES = [
   lesson:[
     {t:'h',x:'Por que DI (Inversão de Controle)'},
     {t:'p',x:'Injeção de dependência é <b>inversão de controle</b>: a classe <b>recebe</b> suas dependências em vez de construí-las. Isso realiza o <b>Dependency Inversion Principle</b> — módulos de alto nível dependem de <b>abstrações</b> (interfaces), não de implementações concretas. Ganho: testabilidade, desacoplamento, reuso.'},
+    {t:'key',x:['<b>Testabilidade</b>: troca a dependência real por um fake no teste.','<b>Desacoplamento</b>: a classe depende de uma interface, não de uma implementação concreta.','<b>Reuso</b>: a mesma classe serve em contextos diferentes conforme o que é injetado.']},
     {t:'h',x:'Construtor vs campo'},
     {t:'cmp',head:['','Injeção por construtor','Injeção por campo'],rows:[
       ['Dependências','Explícitas e obrigatórias','Escondidas'],
@@ -1028,6 +1053,7 @@ const MODULES = [
       ['Testável sem framework','Sim (passa fakes no construtor)','Não (precisa do container)'],
       ['Veredito','<b>Prefira</b>','Evite']
     ]},
+    {t:'p',x:'Regra prática: <b>sempre injeção por construtor</b>. Injeção em campo esconde dependências, impede <code>val</code> e obriga a subir o container só para testar.'},
     {t:'h',x:'Dagger, Hilt e Koin'},
     {t:'cmp',head:['','Dagger / Hilt','Koin'],rows:[
       ['Momento','<b>Compile-time</b> (gera código)','<b>Runtime</b> (DSL / service locator)'],
@@ -1039,6 +1065,7 @@ const MODULES = [
     {t:'call',title:'Compile-time paga a conta antes',x:'Hilt/Dagger pegam o erro de grafo no <b>build</b>, não com o app crashando na mão do usuário — e sem custo de reflexão em runtime. O preço é tempo de compilação e curva. Koin inverte: começa rápido, mas binding ausente só aparece em runtime.'},
     {t:'h',x:'Anatomia do Hilt'},
     {t:'key',x:['<code>@HiltAndroidApp</code> na Application inicia o grafo.','<code>@AndroidEntryPoint</code> em Activity/Fragment habilita a injeção.','<code>@Inject</code> no construtor marca o que o Hilt sabe criar; <code>@HiltViewModel</code> para ViewModels.','<code>@Module @InstallIn(componente)</code> ensina o Hilt a fornecer o que ele não consegue construir sozinho.']},
+    {t:'code',x:'<span class="kw">@HiltAndroidApp class</span> App : Application()\n\n<span class="kw">@AndroidEntryPoint class</span> HomeActivity : ComponentActivity()\n\n<span class="kw">@HiltViewModel class</span> HomeVM <span class="kw">@Inject</span> constructor(repo: Repo) : ViewModel()'},
     {t:'h',x:'@Binds vs @Provides'},
     {t:'code',x:'<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">abstract class</span> DataModule {\n  <span class="kw">@Binds</span>  <span class="cm">// interface -&gt; impl, método abstrato sem corpo</span>\n  <span class="kw">abstract fun</span> repo(impl: UserRepositoryImpl): UserRepository\n}\n\n<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">object</span> NetModule {\n  <span class="kw">@Provides</span>  <span class="cm">// precisa construir -&gt; @Provides com corpo</span>\n  <span class="kw">fun</span> ok(): OkHttpClient = OkHttpClient.Builder().build()\n}'},
     {t:'key',x:['<code>@Binds</code> — liga <b>interface → impl</b> que o Hilt já sabe instanciar; abstrato, sem corpo, mais eficiente.','<code>@Provides</code> — quando você precisa <b>construir</b> o objeto (lib externa via builder, com parâmetros).']},
@@ -1084,15 +1111,19 @@ const MODULES = [
   lesson:[
     {t:'h',x:'Single-Activity & o back stack'},
     {t:'p',x:'A arquitetura moderna é <b>single-Activity</b>: uma Activity hospeda um <code>NavHost</code> e as telas são destinos (composables ou fragments). O <b>NavController</b> gerencia o <b>back stack</b> — a pilha de destinos que o "voltar" desempilha. Ganho: transições consistentes, escopo de estado claro e deep links centralizados, em vez de dezenas de Activities.'},
+    {t:'key',x:['Uma Activity + um <code>NavHost</code>; as telas são destinos.','O <b>back stack</b> é a pilha que o botão "voltar" desempilha.','Centraliza transições, escopo de estado por destino e deep links.']},
     {t:'h',x:'Compose Navigation'},
     {t:'code',x:'NavHost(nav, startDestination = <span class="cm">"lista"</span>) {\n  composable(<span class="cm">"lista"</span>) {\n    Lista(onItem = { id -&gt; nav.navigate(<span class="cm">"fatura/$id"</span>) })\n  }\n  composable(<span class="cm">"fatura/{id}"</span>) { back -&gt;\n    <span class="kw">val</span> id = back.arguments?.getString(<span class="cm">"id"</span>)  <span class="cm">// passa id, não o objeto</span>\n    FaturaTela(id)\n  }\n}'},
     {t:'key',x:['<code>NavHost(navController, startDestination)</code> define o grafo; <code>composable("rota")</code> registra cada destino.','<code>navigate("rota")</code> empilha; <code>popBackStack()</code> desempilha.','O <code>hiltViewModel()</code> num destino tem escopo <b>daquele destino</b> no back stack.']},
     {t:'h',x:'Argumentos: passe id, não objeto'},
     {t:'call',title:'Regra de ouro',x:'Passe <b>ids</b>, não objetos. Argumentos vão para um Bundle (tamanho limitado — risco de <code>TransactionTooLarge</code> — e precisam ser serializáveis) e acoplam as telas ao modelo. O destino recebe o <code>id</code> e carrega os dados na própria fonte (repository/ViewModel).'},
+    {t:'p',x:'Fluxo correto: a lista navega com <code>navigate("detalhe/$id")</code>; a tela de detalhe lê o <code>id</code> e pede os dados ao seu ViewModel/repository. O objeto nunca viaja pela rota.'},
     {t:'h',x:'Navegação type-safe'},
     {t:'p',x:'Rotas por <b>string</b> (<code>"fatura/{id}"</code>) falham em runtime se você errar o nome ou o tipo do argumento. As APIs <b>type-safe</b> (rotas por objetos serializáveis, Navigation Compose 2.8+) movem esses erros para o <b>compilador</b> — some uma classe inteira de bugs de rota.'},
+    {t:'code',x:'<span class="cm">// rota por tipo serializável (Navigation Compose 2.8+)</span>\n<span class="kw">@Serializable data class</span> Fatura(<span class="kw">val</span> id: String)\ncomposable&lt;Fatura&gt; { back -&gt; FaturaTela(back.toRoute&lt;Fatura&gt;().id) }'},
     {t:'h',x:'Grafos aninhados & bottom nav'},
     {t:'key',x:['<b>Nested graphs</b> agrupam fluxos (ex.: todo o onboarding num subgrafo) com um startDestination próprio.','Bottom navigation: cada aba tem seu back stack; use <code>saveState</code>/<code>restoreState</code> para não perder a rolagem ao trocar de aba.','Escopo de ViewModel pode ser amarrado ao grafo (dados compartilhados entre telas de um fluxo).']},
+    {t:'p',x:'Erro comum de bottom nav: ao voltar para uma aba, a rolagem e o estado somem. Corrige com <code>saveState</code>/<code>restoreState</code> ao trocar de aba — cada aba mantém sua própria pilha.'},
     {t:'h',x:'Gerenciando o back stack'},
     {t:'code',x:'nav.navigate(<span class="cm">"home"</span>) {\n  popUpTo(<span class="cm">"login"</span>) { inclusive = <span class="kw">true</span> }  <span class="cm">// tira o login da pilha</span>\n  launchSingleTop = <span class="kw">true</span>              <span class="cm">// não duplica o topo</span>\n}'},
     {t:'p',x:'<code>popUpTo</code> + <code>inclusive</code> limpa destinos ao navegar (ex.: após login, não deixar o usuário "voltar" para a tela de login). <code>launchSingleTop</code> evita empilhar a mesma tela duas vezes.'},
@@ -1141,6 +1172,7 @@ const MODULES = [
     {t:'code',x:'<span class="kw">@Entity</span> <span class="kw">data class</span> Fatura(<span class="kw">@PrimaryKey</span> <span class="kw">val</span> id: String, <span class="kw">val</span> valor: Int, <span class="kw">val</span> pago: Boolean = <span class="kw">false</span>)\n\n<span class="kw">@Dao</span> <span class="kw">interface</span> FaturaDao {\n  <span class="kw">@Query</span>(<span class="cm">"SELECT * FROM Fatura WHERE pago = 0"</span>)\n  <span class="kw">fun</span> abertas(): Flow&lt;List&lt;Fatura&gt;&gt;   <span class="cm">// re-emite quando a tabela muda</span>\n\n  <span class="kw">@Insert</span>(onConflict = REPLACE) <span class="kw">suspend fun</span> upsert(f: Fatura)\n}'},
     {t:'h',x:'Queries reativas com Flow'},
     {t:'p',x:'Um DAO pode retornar <code>Flow</code> (observa: re-emite a cada mudança na tabela) ou <code>suspend</code> (one-shot). Com Flow, a UI reage automaticamente a inserções/updates — <b>sem polling</b>. É o alicerce do offline-first.'},
+    {t:'key',x:['DAO com <code>Flow</code> = observa (re-emite a cada mudança); DAO com <code>suspend</code> = one-shot.','Uma escrita numa transação dispara a re-emissão de todas as queries afetadas.','É o que liga o banco à UI sem polling — a base do offline-first.']},
     {t:'h',x:'Migrations — não perca os dados do usuário'},
     {t:'p',x:'Ao mudar o schema (nova coluna/tabela), você fornece uma <b>Migration</b> que transforma o schema antigo no novo <b>preservando os dados</b>. <code>fallbackToDestructiveMigration()</code> recria o banco (apaga tudo) — aceitável só em dev.'},
     {t:'code',x:'<span class="kw">val</span> MIGRATION_1_2 = <span class="kw">object</span> : Migration(1, 2) {\n  <span class="kw">override fun</span> migrate(db: SupportSQLiteDatabase) {\n    db.execSQL(<span class="cm">"ALTER TABLE Fatura ADD COLUMN pago INTEGER NOT NULL DEFAULT 0"</span>)\n  }\n}\n<span class="cm">// teste a migração com MigrationTestHelper — schema quebrado = crash em produção</span>'},
@@ -1203,8 +1235,10 @@ const MODULES = [
     {t:'code',x:'<span class="kw">sealed interface</span> Resultado&lt;out T&gt; {\n  <span class="kw">data class</span> Ok&lt;T&gt;(<span class="kw">val</span> data: T) : Resultado&lt;T&gt;\n  <span class="kw">data class</span> Erro(<span class="kw">val</span> causa: Throwable) : Resultado&lt;Nothing&gt;\n}\n<span class="kw">suspend fun</span> &lt;T&gt; chamar(bloco: <span class="kw">suspend</span> () -&gt; T) =\n  <span class="kw">try</span> { Resultado.Ok(bloco()) } <span class="kw">catch</span> (e: Exception) { Resultado.Erro(e) }'},
     {t:'h',x:'Cache HTTP & offline-first'},
     {t:'key',x:['OkHttp faz <b>cache HTTP</b> (respeita <code>Cache-Control</code>/ETag) — menos rede, leitura offline.','Padrão robusto: <b>offline-first</b> com <b>Room como fonte da verdade</b>; a rede só atualiza o cache, e a UI observa o banco.','Defina <b>timeouts</b> (connect/read/write) explicitamente — o default pode ser longo demais.']},
+    {t:'p',x:'Offline-first inverte a dependência: a tela lê do <b>Room</b> (sempre responde) e a rede só sincroniza o cache em segundo plano. O usuário nunca fica preso esperando a rede.'},
     {t:'h',x:'Resiliência: retry e refresh de token'},
-    {t:'real',x:'Token expira e todo request volta 401? Um <b>Authenticator</b> do OkHttp renova o token e <b>repete</b> a chamada uma vez — transparente para o usuário. Para falhas transitórias, retry com <b>backoff</b> (não em loop infinito). E toda chamada é <b>HTTPS</b>; dados sensíveis pedem <b>certificate pinning</b> (ver módulo de Segurança).'}
+    {t:'real',x:'Token expira e todo request volta 401? Um <b>Authenticator</b> do OkHttp renova o token e <b>repete</b> a chamada uma vez — transparente para o usuário. Para falhas transitórias, retry com <b>backoff</b> (não em loop infinito). E toda chamada é <b>HTTPS</b>; dados sensíveis pedem <b>certificate pinning</b> (ver módulo de Segurança).'},
+    {t:'key',x:['<b>Authenticator</b> renova o token no 401 e repete a chamada uma vez.','Retry com <b>backoff</b> em falha transitória — nunca em loop.','HTTPS sempre; dado sensível pede certificate pinning.']}
   ],
   quiz:[
     {type:'case',q:'Você precisa anexar o header <code>Authorization: Bearer …</code> em <b>todas</b> as requisições sem repetir código em cada endpoint. Como?',
@@ -1235,6 +1269,7 @@ const MODULES = [
   lesson:[
     {t:'h',x:'Por que o SO restringe o background'},
     {t:'p',x:'Bateria. Desde o Android 8 os apps em background têm <b>limites de execução</b>; o <b>Doze</b> (tela apagada, parado) e o <b>App Standby</b> adiam trabalho e rede em janelas de manutenção. Uma <code>Thread</code>/coroutine solta <b>morre</b> quando o SO encerra o processo — e não volta. Nada que "precisa acontecer" pode depender dela.'},
+    {t:'key',x:['<b>Doze</b>: tela apagada e device parado → trabalho e rede adiados para janelas de manutenção.','<b>App Standby</b>: apps pouco usados têm jobs/rede limitados.','Consequência: nada garantido pode depender de o processo continuar vivo.']},
     {t:'h',x:'A ferramenta certa para cada caso'},
     {t:'cmp',head:['Precisa','Ferramenta'],rows:[
       ['<b>Garantido</b> e deferível (sobrevive a fechar app/reboot)','<b>WorkManager</b>'],
@@ -1242,11 +1277,13 @@ const MODULES = [
       ['Disparo em <b>horário exato</b>','<b>AlarmManager</b> (exact alarm)'],
       ['Enquanto a tela/app está viva','Coroutine em <code>viewModelScope</code>']
     ]},
+    {t:'p',x:'A escolha errada = bug garantido: WorkManager para o que <b>não pode se perder</b>; foreground service para o <b>contínuo e visível</b>; AlarmManager para <b>horário exato</b>; coroutine só enquanto a tela vive.'},
     {t:'h',x:'WorkManager — trabalho garantido'},
     {t:'code',x:'<span class="kw">class</span> UploadWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {\n  <span class="kw">override suspend fun</span> doWork(): Result =\n    <span class="kw">if</span> (enviarComprovante()) Result.success() <span class="kw">else</span> Result.retry()\n}\n\n<span class="kw">val</span> req = OneTimeWorkRequestBuilder&lt;UploadWorker&gt;()\n  .setConstraints(Constraints(requiredNetworkType = NetworkType.CONNECTED))\n  .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, SECONDS)\n  .build()\nWorkManager.getInstance(ctx).enqueue(req)'},
     {t:'key',x:['Garante execução mesmo após fechar o app ou reiniciar o device; escolhe o mecanismo por baixo conforme a versão do Android.','<b>Constraints</b>: só com rede, só carregando, só com bateria/armazenamento ok.','<b>Chaining</b> (encadear), <b>periodic</b> (mínimo 15 min), <b>unique work</b> (não duplicar), <b>backoff</b> em falha.']},
     {t:'h',x:'CoroutineWorker & o Result'},
     {t:'key',x:['<code>Result.success()</code> — concluiu. <code>Result.failure()</code> — desistiu (erro permanente).','<code>Result.retry()</code> — falha transitória; o WorkManager reagenda com o backoff.','<code>CoroutineWorker</code> roda <code>doWork</code> como suspend; para trabalho longo com progresso, use <code>setForeground</code> (vira foreground enquanto roda).']},
+    {t:'code',x:'<span class="kw">override suspend fun</span> doWork(): Result =\n  <span class="kw">try</span> { sincronizar(); Result.success() }\n  <span class="kw">catch</span> (e: IOException) { Result.retry() }   <span class="cm">// transitório -> reagenda</span>'},
     {t:'h',x:'Foreground Service'},
     {t:'p',x:'Para trabalho <b>contínuo, imediato e visível</b> (player de música, rastreio de corrida), use um <b>foreground service</b> com <b>notificação persistente</b>. No Android 14+ é obrigatório declarar o <code>foregroundServiceType</code> (location, mediaPlayback, dataSync…) e justificar o uso — a Play fiscaliza.'},
     {t:'call',title:'WorkManager não é para horário exato',x:'WorkManager pode agrupar/adiar por bateria — não promete instante preciso. Para disparo pontual (alarme, lembrete), use <b>AlarmManager</b> com <code>setExactAndAllowWhileIdle</code>; no Android 12+ isso exige a permissão <code>SCHEDULE_EXACT_ALARM</code>. Para contínuo imediato, foreground service.'},
@@ -1281,12 +1318,20 @@ const MODULES = [
   lesson:[
     {t:'h',x:'Frame budget: de onde vem o jank'},
     {t:'p',x:'A 60fps você tem <b>~16,6ms por frame</b> (a 120fps, ~8,3ms). Estourou o orçamento, o frame é perdido (<b>jank</b>). A causa quase sempre é trabalho pesado na <b>Main thread</b>: I/O, parse de JSON, layout caro, <b>overdraw</b> (pintar o mesmo pixel várias vezes) e <b>alocação</b> que dispara GC. Meça, não chute.'},
+    {t:'key',x:['60fps → ~16,6ms por frame; 120fps → ~8,3ms.','Estourou = frame perdido = travada visível.','Causa comum: trabalho na Main (I/O, parse, layout caro, overdraw, alocação/GC).']},
     {t:'h',x:'Startup: cold, warm, hot'},
     {t:'p',x:'<b>Cold start</b> (processo criado do zero) é o pior caso e o que a Play mede. Reduza-o: adie inicialização pesada (use a <b>App Startup</b> lib para ordenar/lazy), evite trabalho no <code>Application.onCreate</code>, e use a <b>Splash Screen API</b> em vez de uma Activity de splash falsa.'},
+    {t:'cmp',head:['Tipo','O que já existe ao abrir'],rows:[
+      ['<b>Cold</b>','Nada — processo criado do zero (pior caso, o que a Play mede)'],
+      ['<b>Warm</b>','Processo vivo, Activity recriada'],
+      ['<b>Hot</b>','Tudo em memória (mais rápido)']
+    ]},
     {t:'h',x:'Memory leaks clássicos'},
     {t:'key',x:['<code>Context</code>/<code>Activity</code> guardado em <b>static</b> ou singleton de vida longa — a Activity destruída não é coletada.','Listeners/callbacks registrados e <b>não removidos</b> (unregister no onDestroy).','Inner class não-estática segurando o outer (Activity/Fragment) implicitamente.','Detecte com <b>LeakCanary</b>; force checagens de disco/rede na Main com <b>StrictMode</b>.']},
+    {t:'p',x:'O padrão é sempre o mesmo: algo de <b>vida longa</b> (static, singleton, callback) segura algo de <b>vida curta</b> (Activity/View). O LeakCanary avisa em debug; remover listeners no <code>onDestroy</code> previne.'},
     {t:'h',x:'Memória & GC'},
     {t:'key',x:['<b>Bitmaps</b> são os maiores vilões de memória — carregue no tamanho certo (Coil/Glide fazem isso).','Alocação em <b>hot paths</b> (scroll, recomposição) dispara GC e causa jank — reuse objetos.','<b>OutOfMemory</b> costuma ser leak acumulado, não "app grande": investigue com o Memory Profiler (heap dump).']},
+    {t:'p',x:'Regra: não alocar em <b>hot paths</b> (scroll, recomposição) e carregar bitmaps no tamanho da tela. OOM raramente é "app grande" — é leak acumulado; confirme com um heap dump no Memory Profiler.'},
     {t:'h',x:'R8: shrink, obfuscate, optimize'},
     {t:'code',x:'<span class="cm"># proguard-rules.pro — manter o usado por reflexão/serialização</span>\n-keep class com.superapp.model.** { *; }\n-keepclassmembers class ** {\n  <span class="kw">@com.google.gson.annotations.SerializedName</span> &lt;fields&gt;;\n}\n<span class="cm"># sem keep rules, a classe quebra SÓ no release ofuscado</span>'},
     {t:'cmp',head:['','ProGuard','R8'],rows:[
@@ -1297,6 +1342,7 @@ const MODULES = [
     {t:'call',title:'Keep rules e reflexão',x:'R8 remove/renomeia código não referenciado estaticamente. Classes acessadas por <b>reflexão</b> (serialização, DI antigo) precisam de <b>keep rules</b>, senão quebram só no release ofuscado — bug que o debug não pega. E suba o <b>mapping file</b> para desofuscar crashes.'},
     {t:'h',x:'Baseline Profiles'},
     {t:'p',x:'Um <b>baseline profile</b> lista os caminhos de código quentes (startup, primeira rolagem) para o Android <b>compilar AOT</b> antes, evitando o custo do JIT no primeiro uso. Resultado: <b>startup e scroll mais rápidos</b> desde a primeira execução — ganho tipicamente relevante. Gere e meça com <b>Macrobenchmark</b>.'},
+    {t:'key',x:['Compila AOT os caminhos quentes (startup, primeira rolagem) — corta o custo do JIT.','O ganho aparece já na <b>primeira</b> execução do usuário.','Gere a partir de um teste Macrobenchmark das jornadas críticas e meça antes/depois.']},
     {t:'h',x:'Ferramentas de medição'},
     {t:'key',x:['<b>Macrobenchmark</b> — mede startup e scroll de forma reproduzível (a fonte de verdade).','<b>Perfetto / System Trace</b> — timeline detalhada de threads e frames.','<b>Profiler</b> (CPU/Memory) e <b>Layout Inspector</b> (contagem de recomposição no Compose).']},
     {t:'real',x:'App abre devagar e a primeira rolagem trava? Baseline profile das jornadas críticas (splash → home → lista) + medir no Macrobenchmark. E LeakCanary: um <code>Context</code> de Activity preso num singleton de rede é campeão de leak no mundo real.'}
@@ -1345,13 +1391,16 @@ const MODULES = [
       ['Velocidade','Lento','<b>Bem mais rápido</b>'],
       ['Status','Legado','Recomendado (Room, Moshi, Hilt já suportam)']
     ]},
+    {t:'p',x:'Migrar de KAPT para KSP costuma cortar bastante do tempo de build em projetos com Room/Hilt/Moshi — todos já suportam KSP.'},
     {t:'h',x:'Version catalog & convention plugins'},
     {t:'code',x:'<span class="cm"># libs.versions.toml — fonte única de versões</span>\n[versions]\nretrofit = <span class="cm">"2.11.0"</span>\n[libraries]\nretrofit = { module = <span class="cm">"com.squareup.retrofit2:retrofit"</span>, version.ref = <span class="cm">"retrofit"</span> }'},
     {t:'key',x:['<b>Version catalog</b> centraliza versões — sem números mágicos divergentes entre módulos.','<b>Convention plugins</b> (buildSrc / build-logic) tiram a config repetida de cada <code>build.gradle</code> — um único lugar define "o que é um módulo Android da casa".']},
     {t:'h',x:'Modularização: por quê'},
     {t:'key',x:['<b>Build paralelo e incremental</b>: módulos independentes compilam juntos; só o que mudou recompila.','<b>Encapsulamento</b> e <b>ownership</b> por time; fronteiras claras de API.','Habilita <b>dynamic feature modules</b> (entrega sob demanda).']},
+    {t:'p',x:'O ganho só aparece se os módulos forem <b>de fato independentes</b>: dependências mal desenhadas (tudo dependendo de tudo) matam o build paralelo e recriam o monólito com mais cerimônia.'},
     {t:'h',x:'Estrutura de módulos'},
     {t:'p',x:'Um padrão comum (estilo Now in Android): <code>:app</code> (monta tudo), <code>:feature:*</code> (telas/fluxos), <code>:core:*</code> (<code>designsystem</code>, <code>network</code>, <code>data</code>, <code>common</code>). Regra: <b>feature não depende de feature</b>; o compartilhado desce para <code>:core</code>. Evite dependências cíclicas.'},
+    {t:'key',x:['<code>:app</code> monta tudo. <code>:feature:*</code> são telas/fluxos. <code>:core:*</code> são designsystem, network, data, common.','<b>Feature não depende de feature</b>; o compartilhado desce para <code>:core</code>.','Evite dependências cíclicas — o Gradle não compila e o acoplamento vira dívida.']},
     {t:'h',x:'Build mais rápido'},
     {t:'key',x:['Ligue <b>configuration cache</b> e <b>build cache</b> do Gradle.','Prefira <code>implementation</code> a <code>api</code> (menos recompilação transitiva).','KSP no lugar de KAPT; evite trabalho pesado na fase de configuração.']},
     {t:'real',x:'No SuperApp, cada time é dono de um <code>:feature</code>; <code>:core:designsystem</code> e <code>:core:network</code> são compartilhados, ligados por <code>implementation</code> com contratos claros — mudança num feature não recompila os outros nem vaza detalhes internos.'}
@@ -1393,8 +1442,10 @@ const MODULES = [
     {t:'call',title:'Cuidado com pinning',x:'Pinning mal gerenciado <b>quebra o app</b> quando o certificado rotaciona. Fixe a <b>CA intermediária</b> (não a folha), pino de backup e um plano de atualização — senão você derruba a base num vencimento de cert.'},
     {t:'h',x:'Biometria'},
     {t:'p',x:'O <b>BiometricPrompt</b> é a API padrão. O padrão <b>forte</b> não confia no "sim/não" da UI: vincula uma chave do <b>Keystore</b> a um <code>CryptoObject</code> liberado só após a autenticação — assim a operação sensível só acontece com biometria de verdade, sem como falsear.'},
+    {t:'key',x:['<code>BiometricPrompt</code> é a API unificada (digital, face).','O padrão forte vincula uma chave do Keystore a um <code>CryptoObject</code> liberado só após autenticar.','Assim a operação sensível não roda sem biometria de verdade — não dá para falsear o "sim".']},
     {t:'h',x:'Armazenamento & componentes expostos'},
     {t:'key',x:['<b>Scoped storage</b>: acesso restrito; use o <b>Storage Access Framework</b> para arquivos do usuário.','Marque componentes <code>android:exported="false"</code> se não devem ser chamados por outros apps; valide toda Intent recebida.','Permissões em <b>runtime</b>: peça o mínimo, no momento do uso, e trate a negação.']},
+    {t:'p',x:'Toda Intent recebida é <b>entrada não-confiável</b>: valide extras e origem. Componente que não deve ser chamado por outros apps vai com <code>android:exported="false"</code>.'},
     {t:'h',x:'O que NÃO confiar no cliente'},
     {t:'p',x:'Regra de ouro: o dispositivo é <b>hostil</b>. Pode estar com root, o APK pode ser modificado, o tráfego inspecionado. Autorização e regras de negócio críticas ficam no <b>servidor</b>; o cliente valida por UX, o backend valida por segurança. Root/tamper detection ajuda, mas não é barreira absoluta.'},
     {t:'real',x:'Token de sessão do SuperApp: EncryptedSharedPreferences (chave no Keystore), nunca em prefs plano. Backend em TLS com pinning da CA. Pagamento e limites validados no servidor. Zero segredo hardcoded — eles vivem no backend.'}
@@ -1436,17 +1487,22 @@ const MODULES = [
     {t:'code',x:'<span class="cm">// build.gradle.kts — release enxuto</span>\nrelease {\n  isMinifyEnabled = <span class="kw">true</span>      <span class="cm">// R8: shrink + ofusca</span>\n  isShrinkResources = <span class="kw">true</span>\n}\n<span class="cm"># publicar: ./gradlew bundleRelease  -&gt;  app-release.aab</span>'},
     {t:'h',x:'Play App Signing'},
     {t:'p',x:'Com <b>Play App Signing</b>, a Google guarda a <b>chave de assinatura</b> do app com segurança e assina os APKs gerados a partir do seu bundle. Você mantém só a <b>upload key</b> (recuperável se perder). Sem isso, perder a chave = não poder mais atualizar o app.'},
+    {t:'key',x:['Você mantém só a <b>upload key</b> — se perder, a Google reemite; a chave de assinatura fica guardada com segurança.','Sem Play App Signing, perder a chave = não poder mais atualizar o app.','Habilita a Play a gerar e assinar os APKs otimizados do bundle.']},
     {t:'h',x:'Tracks & teste antes de produção'},
     {t:'key',x:['<b>Tracks</b>: internal → closed → open → production, para testar com públicos crescentes.','<b>Pre-launch report</b>: a Play roda o app em vários devices e reporta crashes/acessibilidade antes de você publicar.','Novas contas de teste passam por período mínimo de teste fechado antes de liberar produção.']},
+    {t:'p',x:'A ordem internal → closed → open → production expõe a build a públicos crescentes. O <b>pre-launch report</b> roda o app em vários devices reais e aponta crashes e problemas de acessibilidade antes de você publicar.'},
     {t:'h',x:'Staged rollout & halt'},
     {t:'p',x:'Publique em <b>staged rollout</b>: libera para uma <b>porcentagem</b> (5% → 20% → 50% → 100%), monitorando crash/ANR a cada degrau. Se piorar, você <b>pausa (halt)</b> ou faz rollback do rollout — limitando o raio de impacto de uma regressão.'},
+    {t:'key',x:['Libere por porcentagem (5% → 20% → 50% → 100%), olhando crash/ANR a cada degrau.','Piorou? <b>halt</b> ou reduz o rollout — limita o raio de impacto de uma regressão.','Nunca publique 100% de uma vez para uma base grande.']},
     {t:'h',x:'Não fique cego: mapping & vitals'},
     {t:'call',title:'Mapping file do R8',x:'O R8 ofusca nomes, então as stack traces vêm embaralhadas. Faça <b>upload do mapping file</b> (Play Console/Crashlytics) para <b>desofuscar</b>. Acompanhe o <b>Android Vitals</b> (crash-free rate, ANR rate): passar dos limiares degrada sua visibilidade na loja.'},
+    {t:'p',x:'O <b>Android Vitals</b> (crash-free rate, ANR rate) é acompanhado pela Play: passar dos limiares degrada sua visibilidade na loja. Suba o <b>mapping file</b> para ler crashes ofuscados.'},
     {t:'h',x:'In-app updates'},
     {t:'cmp',head:['','Flexible','Immediate'],rows:[
       ['Experiência','Baixa em background; usuário continua usando','Bloqueia com tela de atualização'],
       ['Quando','Melhoria opcional','Atualização crítica/obrigatória']
     ]},
+    {t:'p',x:'Use <b>immediate</b> para correção crítica (bloqueia até atualizar) e <b>flexible</b> para melhoria (baixa em background). A API é a Play Core / App Update.'},
     {t:'h',x:'Versionamento & CI/CD'},
     {t:'key',x:['<code>versionCode</code> (inteiro sempre crescente, usado pela Play) vs <code>versionName</code> (string para humanos).','Automatize o release com <b>Fastlane</b> ou <b>Gradle Play Publisher</b> a partir do CI (GitLab/Jenkins).','A Play exige atualizar o <b>targetSdk</b> periodicamente — app desatualizado deixa de aparecer para novos usuários.']},
     {t:'real',x:'O redesign entra por <b>staged rollout</b> (5% → monitorar crashes/ANR → subir), com o <b>mapping</b> subido para ler qualquer crash ofuscado. Correção de segurança urgente → <b>in-app update immediate</b>; melhoria → <b>flexible</b>. Tudo disparado pelo pipeline, não na mão.'}
@@ -1500,6 +1556,7 @@ const MODULES = [
     {t:'key',x:['<b>Gradle</b> gerencia dependências; multi-repo Android <b>publica bibliotecas como artefatos Maven</b> (Nexus/Artifactory), consumidas por semver.','<b>Version catalog</b> centraliza as versões numa fonte única.','Composição: <b>composite builds</b> (dev local do módulo sem publicar), <b>git submodules</b> — cada um com seu trade-off.']},
     {t:'h',x:'SemVer & dependency hell'},
     {t:'p',x:'<b>Semantic Versioning</b> (<code>MAJOR.MINOR.PATCH</code>): MAJOR quebra compatibilidade, MINOR adiciona compatível, PATCH corrige. O <b>dependency hell</b> aparece quando dois módulos pedem versões transitivas conflitantes da mesma lib — resolva com <b>BOM</b> (platform) ou <code>resolutionStrategy</code>. Consumir por <b>versão fixa publicada</b> (não branch flutuante) evita o "funcionava ontem".'},
+    {t:'key',x:['<b>MAJOR</b> quebra compatibilidade; <b>MINOR</b> adiciona compatível; <b>PATCH</b> corrige.','Conflito transitivo (dois módulos pedindo versões diferentes da mesma lib) → resolva com <b>BOM</b> ou <code>resolutionStrategy</code>.','Consuma por versão fixa publicada, nunca por branch flutuante.']},
     {t:'h',x:'Contratos entre módulos'},
     {t:'key',x:['O módulo compartilhado tem uma <b>API pública</b> = contrato. Mudança incompatível → nova <b>MAJOR</b>, não um patch silencioso.','Use <b>deprecation</b> antes de remover: dá aos consumidores tempo de migrar.','Publique changelog; consumidores atualizam a versão <b>quando puderem</b>, não de surpresa.']},
     {t:'real',x:'SuperApp com múltiplos times: <code>designsystem</code> e <code>auth</code> compartilhados, cada um versionado e publicado no Artifactory; os apps consomem versões específicas via version catalog. Um breaking change vira 3.0.0; quem consome migra no seu tempo — sem quebrar 3 apps de uma vez.'},
@@ -1537,8 +1594,10 @@ const MODULES = [
   lesson:[
     {t:'h',x:'POUR — os 4 princípios'},
     {t:'key',x:['<b>P</b>erceptível — a informação chega aos sentidos (texto alternativo, contraste, legendas).','<b>O</b>perável — dá para usar por teclado/toque/leitor (foco, alvos, sem armadilhas).','<b>U</b>nderstandable — previsível e claro (labels, mensagens de erro).','<b>R</b>obusto — compatível com <b>tecnologias assistivas</b> (nome, função e valor expostos corretamente).']},
+    {t:'p',x:'Mnemônico: <b>P</b>erceber, <b>O</b>perar, <b>U</b>nderstand (entender) e <b>R</b>obustez (funcionar com tecnologias assistivas). Se um critério não cabe em nenhum, você provavelmente entendeu errado.'},
     {t:'h',x:'Níveis A / AA / AAA'},
     {t:'p',x:'A é o mínimo, <b>AA</b> é o alvo prático e legal na maioria dos casos, AAA é o mais rigoroso (raramente exigido inteiro). A vaga pede <b>AA</b> — então você precisa saber exatamente o que é AA e, principalmente, o que <em>não</em> é (é onde estão as pegadinhas).'},
+    {t:'key',x:['<b>A</b> — mínimo; muita coisa quebra sem ele.','<b>AA</b> — alvo prático e legal (o que a vaga pede).','<b>AAA</b> — mais rigoroso, raramente exigido inteiro.']},
     {t:'h',x:'Critérios AA que caem em entrevista'},
     {t:'cmp',head:['Critério','Regra AA'],rows:[
       ['<b>1.4.3</b> Contraste','Texto normal <b>4.5:1</b>; texto grande (≥18pt / 14pt bold) <b>3:1</b>'],
@@ -1556,6 +1615,7 @@ const MODULES = [
     {t:'code',x:'<span class="cm">// Decorativo: leitor ignora</span>\nImage(painter, contentDescription = <span class="kw">null</span>)\n\n<span class="cm">// Cabeçalho semântico p/ o TalkBack navegar por seções</span>\nText(<span class="cm">"Suas faturas"</span>, Modifier.semantics { heading() })\n\n<span class="cm">// Estado descrito para o leitor</span>\nModifier.semantics { stateDescription = <span class="kw">if</span> (pago) <span class="cm">"pago"</span> <span class="kw">else</span> <span class="cm">"em aberto"</span> }'},
     {t:'h',x:'Como o TalkBack navega'},
     {t:'p',x:'O usuário do TalkBack varre a tela por <b>swipe</b> (próximo/anterior) ou pula por <b>headings</b>. Por isso <b>ordem de foco</b> lógica, <b>headings</b> nas seções e <b>roles</b> corretos (botão, checkbox) são o que torna a tela navegável — não basta "ter contentDescription". Anúncios dinâmicos (ex.: "3 itens no carrinho") usam <code>liveRegion</code>.'},
+    {t:'key',x:['Swipe → próximo/anterior; ou pula por <b>headings</b>.','<b>Ordem de foco</b> lógica + <b>roles</b> corretos = tela navegável.','Anúncios dinâmicos (ex.: "3 itens no carrinho") usam <code>liveRegion</code>.']},
     {t:'h',x:'Testando acessibilidade'},
     {t:'key',x:['<b>Accessibility Scanner</b> (app do Google) aponta contraste, alvos pequenos e labels faltando.','<b>Compose UI Test</b> por semântica (<code>onNodeWithContentDescription</code>) testa a11y junto com a função.','Nada substitui <b>usar com TalkBack</b> ligado e checar contraste também no <b>dark mode</b>.']},
     {t:'real',x:'No redesign, erro de formulário marcado <b>só</b> em vermelho reprova 1.4.1: adicione ícone + texto ("CPF inválido") e associe a mensagem ao campo (3.3.1). Cabeçalhos ganham <code>heading()</code>; e o contraste dos novos tokens de cor é revisado nos dois temas.'}
@@ -1604,6 +1664,7 @@ const MODULES = [
       ['Push + analytics + engajamento','<b>Pinpoint</b> (ou <b>SNS</b> só para push)'],
       ['Fila / mensageria','<b>SQS</b> (fila), <b>EventBridge</b> (eventos)']
     ]},
+    {t:'p',x:'Você não precisa ser arquiteto de nuvem, mas saber <b>qual serviço resolve o quê</b> num app mobile — e a segurança que separa sênior de júnior (credencial temporária, nunca chave fixa).'},
     {t:'h',x:'Cognito: User Pool vs Identity Pool'},
     {t:'code',x:'<span class="cm">// login no User Pool -&gt; credencial temporária pelo Identity Pool</span>\nAmplify.Auth.signIn(user, pass) { \n  Amplify.Auth.fetchAuthSession { session -&gt;\n    <span class="kw">val</span> creds = (session <span class="kw">as</span> AWSCognitoAuthSession).awsCredentials\n    <span class="cm">// creds AWS temporárias -&gt; acessa o S3 com IAM de menor privilégio</span>\n    <span class="cm">// NUNCA embutir Access Key/Secret no app</span>\n  }\n}'},
     {t:'cmp',head:['','User Pool','Identity Pool (Federated Identities)'],rows:[
@@ -1614,10 +1675,13 @@ const MODULES = [
     {t:'call',title:'A regra de ouro de segurança',x:'<b>NUNCA</b> embuta chaves IAM de longa duração (Access Key/Secret) no app — elas podem ser extraídas do APK. O app autentica no <b>User Pool</b>, e o <b>Identity Pool</b> entrega <b>credenciais temporárias</b> com uma <b>IAM Role de menor privilégio</b> para acessar S3/DynamoDB.'},
     {t:'h',x:'IAM & credenciais temporárias'},
     {t:'p',x:'O <b>Identity Pool</b> usa o <b>STS</b> para trocar a identidade autenticada por <b>credenciais temporárias</b> (expiram) atreladas a uma <b>IAM Role</b>. Essa role tem uma <b>policy</b> de <b>menor privilégio</b> — ex.: só <code>PutObject</code> no prefixo do próprio usuário no bucket. Nada de chave permanente no app.'},
+    {t:'key',x:['O STS troca a identidade autenticada por credenciais que <b>expiram</b>.','A IAM Role tem policy de <b>menor privilégio</b> (ex.: só PutObject no prefixo do próprio usuário).','Zero chave permanente no APK — ela seria extraída em segundos.']},
     {t:'h',x:'API Gateway + Lambda vs AppSync'},
     {t:'key',x:['<b>API Gateway + Lambda</b> — APIs REST/HTTP serverless, paga por invocação. Boa para endpoints sob demanda e lógica custom.','<b>AppSync</b> — GraphQL gerenciado, com <b>subscriptions em tempo real</b> e <b>sincronização offline</b> — encaixa em apps mobile com dados vivos.']},
+    {t:'p',x:'Regra: REST sob demanda e lógica custom → <b>API Gateway + Lambda</b>; dados vivos, real-time e offline → <b>AppSync</b> (GraphQL gerenciado).'},
     {t:'h',x:'Amplify: o SDK mobile'},
     {t:'key',x:['<b>Amplify</b> é o framework/SDK que amarra Cognito, S3, AppSync e Pinpoint no app com pouca configuração.','<b>Amplify DataStore</b> dá um modelo local sincronizado (offline-first) sobre AppSync.','Ele acelera o comum, mas você ainda precisa entender IAM e os serviços por baixo.']},
+    {t:'p',x:'Amplify acelera o comum, mas não te isenta: você ainda precisa entender IAM e os serviços por baixo para não criar um bucket público ou uma role permissiva demais.'},
     {t:'h',x:'Push & mensageria: SNS, SQS, Pinpoint'},
     {t:'cmp',head:['','Modelo','Uso'],rows:[
       ['<b>SNS</b>','Pub/Sub (push, fan-out)','Notificar N assinantes; push básico'],
@@ -1665,6 +1729,7 @@ const MODULES = [
     {t:'code',x:'<span class="cm"># .gitlab-ci.yml</span>\nstages: [build, test, quality, package]\n\ntest:\n  stage: test\n  script: ./gradlew testDebugUnitTest\n\nquality:\n  stage: quality\n  script: ./gradlew detekt sonar   <span class="cm"># quality gate barra o merge se falhar</span>\n\npackage:\n  stage: package\n  script: ./gradlew bundleRelease  <span class="cm"># assina o AAB (chave em variavel protegida)</span>\n  rules: [{ if: <span class="cm">"$CI_COMMIT_TAG"</span> }]'},
     {t:'h',x:'CI, CD e estratégia de branch'},
     {t:'key',x:['<b>CI</b> (Continuous Integration): integra e testa cada push cedo, no MR.','<b>CD</b>: Continuous <b>Delivery</b> deixa pronto para publicar (deploy manual); Continuous <b>Deployment</b> publica automático.','<b>Trunk-based</b> (branches curtos, merge frequente) casa melhor com CI do que GitFlow com branches longos.']},
+    {t:'p',x:'Delivery = pronto para publicar com um clique; Deployment = publica sozinho ao passar nos gates. Trunk-based (branches curtos) integra cedo e reduz merge hell — combina melhor com CI do que branches longos.'},
     {t:'h',x:'GitLab CI vs Jenkins'},
     {t:'cmp',head:['','GitLab CI','Jenkins'],rows:[
       ['Configuração','<code>.gitlab-ci.yml</code> (YAML) versionado no repo','<code>Jenkinsfile</code> (Groovy) ou UI; muitos plugins'],
@@ -1672,12 +1737,14 @@ const MODULES = [
       ['Ecossistema','Cloud-native, tudo-em-um (SCM+CI+registry)','Flexível via plugins, mais legado'],
       ['Manutenção','Menor (gerenciado/integrado)','Maior (servidor, plugins, atualizações)']
     ]},
+    {t:'p',x:'Resumo: GitLab CI é tudo-em-um, YAML no repo, menos manutenção; Jenkins é servidor central, poderosíssimo via plugins, porém mais legado e custoso de manter.'},
     {t:'h',x:'SonarQube & o Quality Gate'},
     {t:'p',x:'SonarQube faz <b>análise estática</b>: bugs, vulnerabilidades, <b>security hotspots</b>, code smells, duplicação e cobertura. O <b>Quality Gate</b> é um conjunto de condições que, se não atendidas, <b>bloqueia o merge</b>.'},
     {t:'key',x:['<b>Clean as You Code</b>: o gate foca no <b>código novo/alterado</b>, não em reprovar todo o legado.','Métricas típicas: 0 novos bugs/vulnerabilidades, cobertura mínima no new code, duplicação abaixo do limite.','O status do gate aparece no MR e pode barrar o merge — automatiza o que o humano não precisa revisar na mão.']},
     {t:'call',title:'Por que "new code"',x:'Impor 80% de cobertura num legado gigante trava o time e gera testes-teatro. Clean as you code exige qualidade no que você <b>toca agora</b> — a base melhora incremental, sem paralisar entregas.'},
     {t:'h',x:'Assinatura & segredos no pipeline'},
     {t:'key',x:['A <b>chave de assinatura</b> e tokens (Play, Firebase) ficam em <b>variáveis protegidas/secrets</b> do CI — <b>nunca</b> no repo.','Deploy automatizado com <b>Gradle Play Publisher</b> ou <b>Fastlane</b> a partir do CI.','QA recebe builds por <b>Firebase App Distribution</b>; produção via Play (staged rollout).']},
+    {t:'p',x:'Regra inegociável: chave de assinatura e tokens vivem em <b>variáveis protegidas</b> do CI, nunca no repo. Vazou no git = comprometeu o app.'},
     {t:'h',x:'Jira — rastreabilidade'},
     {t:'p',x:'Gestão ágil: épicos, histórias, tarefas e bugs em boards (Scrum/Kanban) com workflow de status. <b>Smart commits</b> e integrações ligam commits/MRs às issues, dando <b>rastreabilidade</b> do requisito ao merge.'},
     {t:'real',x:'No SuperApp: cada história do Jira vira um branch; o MR no GitLab dispara o pipeline (build → testes → detekt → Sonar gate); só com gate verde e review aprovado o merge acontece; o AAB assinado vai para QA via Firebase e para produção via Play. O ticket fecha por smart commit. Num fluxo agentic SDLC, o agente abre o MR — os gates continuam sendo a autoridade.'}
@@ -1721,8 +1788,10 @@ const MODULES = [
     ]},
     {t:'h',x:'O que testar em cada nível (Android)'},
     {t:'key',x:['<b>Unitário</b>: ViewModel, use cases, mappers, lógica de domínio — na JVM, sem Android.','<b>Integração</b>: DAO do Room (banco em memória), repository (rede fake + cache), serialização.','<b>UI</b>: Compose UI Test / Espresso para fluxos críticos (login, checkout).']},
+    {t:'p',x:'A intuição: teste a <b>lógica</b> na base (rápido, muitos), integração no meio, e só os <b>fluxos críticos</b> no topo (login, checkout) com UI test — que é lento e frágil.'},
     {t:'h',x:'Ferramentas Android'},
     {t:'key',x:['<b>JUnit</b> + <b>MockK</b>/Mockito + <b>Truth</b>/AssertJ — unidade na JVM.','<b>Robolectric</b> — Android <b>na JVM</b> (rápido, sem device). <b>Espresso</b> — UI <b>instrumentada</b> (device/emulador).','<b>Compose UI Test</b> — <code>createComposeRule()</code>. <b>coroutines-test</b> (<code>runTest</code>) + <b>Turbine</b> para Flow.']},
+    {t:'p',x:'Combinação típica: JUnit + MockK + Truth para unidade; Robolectric quando precisa de Android na JVM; Compose UI Test / Espresso para UI; Turbine para Flow.'},
     {t:'h',x:'Testando coroutines & Flow'},
     {t:'p',x:'Nunca dependa de <code>Dispatchers.Main</code> direto: <b>injete o dispatcher</b>. No teste, um <code>TestDispatcher</code> com <code>runTest</code> controla o <b>tempo virtual</b> — determinístico, sem flaky de timing (<code>StandardTestDispatcher</code> enfileira; <code>UnconfinedTestDispatcher</code> roda eager).'},
     {t:'code',x:'<span class="kw">@Test</span> <span class="kw">fun</span> emiteEstados() = runTest {\n  <span class="kw">val</span> vm = FaturasVM(FakeRepo(), StandardTestDispatcher())\n  vm.state.test {                 <span class="cm">// Turbine observa o Flow</span>\n    assertEquals(Loading, awaitItem())\n    vm.carregar()\n    assertTrue(awaitItem() <span class="kw">is</span> Ok)\n  }\n}'},
@@ -1739,6 +1808,7 @@ const MODULES = [
     {t:'p',x:'O teste de Compose consulta a <b>árvore de semântica</b> (<code>onNodeWithText</code>, <code>onNodeWithContentDescription</code>) — o mesmo que o TalkBack lê. Testar por semântica cobre funcionalidade <b>e</b> acessibilidade de uma vez.'},
     {t:'h',x:'Cobertura: sinal, não meta'},
     {t:'call',title:'100% não garante nada',x:'Cobertura mede <b>linhas executadas</b>, não corretude — dá para ter 100% com testes que não afirmam nada útil. Vale como sinal (o que nunca roda?), não como meta perseguida. O que importa é cobrir o <b>comportamento</b> e os <b>edge cases</b> (erro, offline, vazio).'},
+    {t:'p',x:'Use a cobertura para achar o que <b>nunca roda</b>, não como meta a perseguir. Um teste que executa a linha mas não afirma nada infla o número e não pega bug nenhum.'},
     {t:'h',x:'Code review que agrega'},
     {t:'key',x:['Foque no que a máquina não vê: <b>corretude, design, legibilidade, segurança, edge cases</b>.','<b>Automatize</b> formatação/estilo/lint (ktlint/detekt) — nada de bikeshedding de vírgula.','<b>PRs pequenos</b> recebem review melhor; feedback <b>acionável</b> e específico, não "não gostei".','Revisando código de <b>IA</b>: desconfie de APIs/paths inventados, testes que não testam nada e "parece certo mas não trata o edge case".']},
     {t:'real',x:'No SuperApp (agentic SDLC), um agente abre o MR; o pipeline roda detekt + testes + Sonar gate (a máquina valida o mecânico) e o humano revisa se a jornada está correta, se o offline foi tratado e se o estado de erro é acessível. Máquina no repetível, humano no julgamento.'}
@@ -1787,12 +1857,14 @@ const MODULES = [
       ['<b>Review</b>','Demonstrar o incremento e colher feedback dos stakeholders'],
       ['<b>Retrospectiva</b>','Melhorar o processo do time (ações concretas)']
     ]},
+    {t:'p',x:'Todos são <b>timeboxed</b> (têm limite de tempo). Confundir os eventos é clássico: Planning define, Daily sincroniza, Review mostra o produto, Retro melhora o processo.'},
     {t:'h',x:'Review vs Retrospectiva'},
     {t:'cmp',head:['','Sprint Review','Retrospectiva'],rows:[
       ['Foco','O <b>produto</b>: demonstrar o incremento','O <b>processo</b>: como o time trabalhou'],
       ['Audiência','Stakeholders + time','O time'],
       ['Saída','Feedback sobre o que foi feito','Ações de melhoria do processo']
     ]},
+    {t:'p',x:'A pegadinha: Review é sobre o <b>produto</b> (com stakeholders); Retrospectiva é sobre o <b>processo</b> (só o time). Trocar os focos é engano frequente.'},
     {t:'h',x:'Scrum vs Kanban'},
     {t:'cmp',head:['','Scrum','Kanban'],rows:[
       ['Cadência','Sprints (timeboxes)','Fluxo contínuo'],
@@ -1804,8 +1876,10 @@ const MODULES = [
     {t:'p',x:'<b>WIP limit</b> força "terminar antes de começar", expondo gargalos e cortando troca de contexto. "Pare de começar, comece a terminar."'},
     {t:'h',x:'Estimativa, métricas, DoD & DoR'},
     {t:'key',x:['<b>Story points</b> (planning poker) medem esforço/complexidade relativa, não horas.','<b>Velocity</b> (Scrum) e <b>lead/cycle time</b> (Kanban) são para o time se planejar — não para cobrar indivíduos.','<b>DoR</b> (Definition of Ready) = pronto para <b>entrar</b>; <b>DoD</b> (Definition of Done) = pronto para <b>sair</b>; <b>critério de aceite</b> = comportamento específico da história.']},
+    {t:'p',x:'Métrica é para o <b>time se planejar</b>, não para cobrar indivíduo. Comparar velocity entre times é uso errado — cada time estima na sua régua.'},
     {t:'h',x:'O que a vaga pede: comunicação, autonomia, resiliência'},
     {t:'key',x:['<b>Comunicação</b>: expor bloqueio cedo, escrever MR/spec claros, alinhar com times multidisciplinares (design, backend, QA).','<b>Autonomia</b>: destravar sozinho, decidir com dados, pedir ajuda no momento certo — não sumir nem travar.','<b>Resiliência</b>: manter qualidade sob pressão (release travado, requisito mudou) e aprender com o erro.']},
+    {t:'p',x:'A parte técnica abre a porta; o comportamental fecha o contrato. Prepare <b>casos concretos</b> de cada uma dessas competências — não adjetivos.'},
     {t:'h',x:'Comportamental: use STAR'},
     {t:'p',x:'Responda com <b>STAR</b>: <b>S</b>ituação, <b>T</b>arefa, <b>A</b>ção (o que <em>você</em> fez, em 1ª pessoa), <b>R</b>esultado (mensurável). Perguntas comuns: um conflito no time, um erro que você cometeu, um prazo apertado, um feedback difícil — todas pedem um caso concreto, não adjetivos.'},
     {t:'real',x:'"Conte sobre um cenário adverso." Ruim: "o projeto foi difícil mas deu certo". Bom (STAR): situação (release travado por flaky tests), tarefa (destravar sem baixar qualidade), ação (isolei os testes, injetei dispatcher, estabilizei o pipeline), resultado (suíte 30% mais rápida, 0 flaky em 2 sprints). Resiliência demonstrada, não afirmada.'}
@@ -1870,6 +1944,7 @@ const MODULES = [
     {t:'p',x:'Status certos importam: <b>2xx</b> sucesso, <b>4xx</b> erro do cliente (400 validação, 401 não autenticado, 403 sem permissão, 404 inexistente, 409 conflito), <b>5xx</b> erro do servidor. O app decide o comportamento pelo código.'},
     {t:'h',x:'JPA/Hibernate & transações'},
     {t:'key',x:['<code>@Entity</code> mapeia a tabela; o repositório (Spring Data JPA) gera CRUD a partir da interface.','<code>@Transactional</code> torna o método atômico — commit no fim, rollback em exceção.','Cuidado com o <b>N+1</b>: carregar uma lista e disparar uma query por item (lazy loading) — resolva com <code>join fetch</code>/EntityGraph.']},
+    {t:'code',x:'<span class="kw">@Transactional</span>\n<span class="kw">public void</span> pagar(String id) {\n  Fatura f = repo.findById(id).orElseThrow();\n  f.setPago(<span class="kw">true</span>);   <span class="cm">// commit no fim; rollback se lançar exceção</span>\n}'},
     {t:'h',x:'O padrão BFF (Backend for Frontend)'},
     {t:'p',x:'Um <b>BFF</b> é um backend dedicado ao cliente (o app Android) que <b>agrega</b> vários microserviços e entrega exatamente o payload da tela — menos round-trips, menos over-fetching, contrato sob medida. Alternativa/parente: GraphQL/AppSync, onde o cliente pede os campos.'},
     {t:'real',x:'No SuperApp, um BFF em Spring Boot compõe faturas, perfil e ofertas numa só resposta para a home redesenhada — em vez de o app fazer 3 chamadas e montar no cliente. O time mobile ganha um contrato estável e otimizado. Testes com JUnit/Mockito e <code>@SpringBootTest</code>; saúde exposta pelo <b>Actuator</b>.'}
