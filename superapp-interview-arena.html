@@ -321,6 +321,17 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
   .hero{padding:30px 0 10px}
   .qcard{padding:20px}
   .grid{grid-template-columns:1fr}
+  /* tabela comparativa empilha — nada de texto cortado */
+  .tablewrap{overflow-x:visible}
+  table.cmp{min-width:0;width:100%;display:block}
+  table.cmp thead{display:none}
+  table.cmp tbody{display:block}
+  table.cmp tr{display:block;border-bottom:none;border-top:1px solid var(--border);padding:4px 0}
+  table.cmp tr:first-child{border-top:none}
+  table.cmp td{display:flex;gap:10px;border:none;padding:7px 14px;white-space:normal;overflow-wrap:anywhere;align-items:baseline}
+  table.cmp td:first-child{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px;color:var(--text);background:var(--surface-2);padding:9px 14px}
+  table.cmp td:not(:first-child)::before{content:attr(data-label);font-weight:600;color:var(--text-dim);min-width:78px;max-width:42%;flex-shrink:0}
+  table.cmp td:not(:first-child)[data-label=""]::before{content:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -352,6 +363,7 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
       <span class="eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h6l2 2h10v10H3z"/></svg>Minhas vagas</span>
       <h1>Estude por vaga. Cada vaga, a sua trilha.</h1>
       <p class="lead">Crie uma vaga, escolha os assuntos do banco, estude cada aula, feche os quizzes e prove tudo na <em>prova final</em>. O progresso de cada assunto vale para todas as vagas que o usam.</p>
+      <div class="statrow"><button class="btn" onclick="openCatalog()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Ver todos os assuntos do banco</button></div>
     </section>
     <div class="sectlabel"><h2>Minhas vagas</h2><span class="rule"></span><span class="count" id="vagaCount"></span></div>
     <div class="grid" id="vagaGrid"></div>
@@ -385,6 +397,17 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
     <div class="qscore"><span>✓ <b id="scOk">0</b></span><span class="wr">✕ <span id="scNo">0</span></span></div>
   </div>
   <div id="qStage"></div>
+</div></div>
+
+<div id="catalog" class="view"><div class="wrap">
+  <div class="backbar" id="catalogBack"></div>
+  <section class="hero" style="padding-bottom:8px">
+    <span class="eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg>Banco de assuntos</span>
+    <h1>Todos os assuntos (módulos)</h1>
+    <p class="lead">O catálogo completo de temas. Estude a aula ou faça o quiz de qualquer assunto direto daqui — o progresso vale para todas as suas vagas.</p>
+  </section>
+  <div class="sectlabel"><h2>Assuntos</h2><span class="rule"></span><span class="count" id="catCount"></span></div>
+  <div class="grid" id="catGrid"></div>
 </div></div>
 
 <footer class="foot"><div class="wrap">
@@ -1581,7 +1604,7 @@ function vagaTopics(v){return (v&&v.topicIds?v.topicIds:[]).map(getTopic).filter
 function activeVaga(){return getVaga(S.activeVaga);}
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function backBtn(js,label){return '<button class="btn ghost" onclick="'+js+'">'+svg('<path d="m15 18-6-6 6-6"/>')+label+'</button>';}
-function backHome(){renderHome();go('home');}
+function backHome(){if(typeof gReturn!=='undefined'&&gReturn==='catalog'){renderCatalog();go('catalog');window.scrollTo(0,0);return;}renderHome();go('home');}
 function pill(icon,txt){return '<span class="pill">'+svg(icon)+txt+'</span>';}
 
 const LEVELS=[
@@ -1631,6 +1654,17 @@ function moduleProgress(m){const lp=S.lessons[m.id]?1:0;const q=S.quiz[m.id];
 function topicDominated(m){const q=S.quiz[m.id];return !!(S.lessons[m.id]&&q&&q.best>=Math.ceil(m.quiz.length*0.7));}
 function vagaProgress(v){const ts=vagaTopics(v);if(!ts.length)return{pct:0,done:0,total:0};let sum=0,done=0;ts.forEach(m=>{sum+=moduleProgress(m).pct;if(topicDominated(m))done++;});return{pct:Math.round(sum/ts.length),done,total:ts.length};}
 function bossCount(v){return Math.min(24, vagaTopics(v).reduce((a,t)=>a+Math.min(2,t.quiz.length),0));}
+function topicCard(m,i){var p=moduleProgress(m);return ''+
+  '<span class="num">'+String(i+1).padStart(2,'0')+'</span>'+
+  '<span class="badge-done">'+svg('<path d="m20 6-11 11-5-5"/>')+'DOMINADO</span>'+
+  '<div class="ico">'+svg(IC[m.icon])+'</div>'+
+  '<h3>'+m.title+'</h3>'+
+  '<p class="tag">'+m.tag+'</p>'+
+  '<div class="chips">'+m.chips.map(function(c){return '<span class="chip">'+c+'</span>';}).join('')+'</div>'+
+  '<div class="progline"><div class="bar"><i style="width:'+p.pct+'%"></i></div>'+
+    '<div class="lbl"><span>'+(p.lp?'Aula lida':'Aula pendente')+'</span><span>'+(p.qbest!=null?('Quiz '+p.qbest+'/'+m.quiz.length):(m.quiz.length+' questões'))+'</span></div></div>'+
+  '<div class="foot"><button class="btn ghost" data-lesson="'+m.id+'">'+svg('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>')+'Estudar</button>'+
+    '<button class="btn primary" data-quiz="'+m.id+'">'+svg('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>')+'Quiz</button></div>';}
 
 /* ---- VAGAS (landing) ---- */
 function renderVagas(){
@@ -1662,7 +1696,18 @@ function renderVagas(){
     '<button class="btn ghost" onclick="document.getElementById(\'importFile\').click()">'+svg(IUP)+'Importar</button></span>';
   updateHUD();
 }
-function openVaga(id){S.activeVaga=id;save();renderHome();go('home');window.scrollTo(0,0);}
+function openVaga(id){gReturn='home';S.activeVaga=id;save();renderHome();go('home');window.scrollTo(0,0);}
+
+/* ---- CATÁLOGO: banco de todos os assuntos ---- */
+var gReturn='home';
+function currentView(){var a=document.querySelector('.view.active');return a?a.id:'vagas';}
+function openCatalog(){gReturn='catalog';renderCatalog();go('catalog');window.scrollTo(0,0);}
+function renderCatalog(){
+  $('#catalogBack').innerHTML=backBtn("go('vagas')",'Minhas vagas');
+  var g=$('#catGrid'); if(!g)return; g.innerHTML='';
+  MODULES.forEach(function(m,i){var el=document.createElement('div');el.className='card'+(moduleProgress(m).pct>=100?' done':'');el.innerHTML=topicCard(m,i);g.appendChild(el);});
+  var cc=$('#catCount'); if(cc)cc.textContent=MODULES.length+' assuntos · '+MODULES.reduce(function(a,m){return a+m.quiz.length;},0)+' questões';
+}
 
 /* ---- TRILHA (home = uma vaga) ---- */
 function renderHome(){
@@ -1688,23 +1733,7 @@ function renderHome(){
     '</div>';
   const g=$('#grid'); g.innerHTML='';
   if(!ts.length){g.innerHTML='<p class="dim" style="grid-column:1/-1">Nenhum assunto nesta vaga. Clique em <b>Editar assuntos</b> para escolher do banco.</p>';}
-  ts.forEach((m,i)=>{
-    const p=moduleProgress(m);
-    const el=document.createElement('div');
-    el.className='card'+(p.pct>=100?' done':'');
-    el.innerHTML=
-      '<span class="num">'+String(i+1).padStart(2,'0')+'</span>'+
-      '<span class="badge-done">'+svg('<path d="m20 6-11 11-5-5"/>')+'DOMINADO</span>'+
-      '<div class="ico">'+svg(IC[m.icon])+'</div>'+
-      '<h3>'+m.title+'</h3>'+
-      '<p class="tag">'+m.tag+'</p>'+
-      '<div class="chips">'+m.chips.map(c=>'<span class="chip">'+c+'</span>').join('')+'</div>'+
-      '<div class="progline"><div class="bar"><i style="width:'+p.pct+'%"></i></div>'+
-        '<div class="lbl"><span>'+(p.lp?'Aula lida':'Aula pendente')+'</span><span>'+(p.qbest!=null?('Quiz '+p.qbest+'/'+m.quiz.length):(m.quiz.length+' questões'))+'</span></div></div>'+
-      '<div class="foot"><button class="btn ghost" data-lesson="'+m.id+'">'+svg('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>')+'Estudar</button>'+
-        '<button class="btn primary" data-quiz="'+m.id+'">'+svg('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>')+'Quiz</button></div>';
-    g.appendChild(el);
-  });
+  ts.forEach(function(m,i){var el=document.createElement('div');el.className='card'+(moduleProgress(m).pct>=100?' done':'');el.innerHTML=topicCard(m,i);g.appendChild(el);});
   $('#trackCount').textContent=ts.length+' assuntos · '+ts.reduce((a,m)=>a+m.quiz.length,0)+' questões';
   $('#footProg').textContent=S.xp+' XP · '+vp.done+'/'+vp.total+' dominados nesta vaga';
   updateHUD();
@@ -1774,7 +1803,7 @@ function renderLessonBlock(b){
     case 'real': return '<div class="callout real"><div class="ct">'+svg('<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/>')+(b.title||'No mundo real')+'</div><p>'+b.x+'</p></div>';
     case 'code': return '<pre class="code">'+b.x+'</pre>';
     case 'cmp': return '<div class="tablewrap"><table class="cmp"><thead><tr>'+b.head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
-      b.rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+      b.rows.map(function(r){return '<tr>'+r.map(function(c,ci){return '<td data-label="'+esc(stripTags(b.head[ci]||''))+'">'+c+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
   }
   return '';
 }
@@ -1818,7 +1847,7 @@ function startQuiz(id){
   go('quiz'); window.scrollTo(0,0); renderQ();
 }
 function startBoss(vid){
-  const v=getVaga(vid); if(!v)return; const ts=vagaTopics(v); if(!ts.length)return;
+  const v=getVaga(vid); if(!v)return; const ts=vagaTopics(v); if(!ts.length)return; gReturn='home';
   let pool=[];
   ts.forEach(function(t){ const qs=shuffle(t.quiz.map(function(q){return Object.assign({src:t.title},q);})); pool=pool.concat(qs.slice(0,2)); });
   pool=shuffle(pool); if(pool.length>24)pool=pool.slice(0,24);
@@ -1889,7 +1918,8 @@ function finish(){
     (isBest?'<div class="xpgain">'+svg('<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>')+(boss?'Novo recorde na prova final':'Novo recorde neste assunto')+'</div>':'')+
     '<div class="actions">'+actions+'</div></div>';
   $('#qBar').style.width='100%'; $('#qProgLbl').textContent='Concluído';
-  renderHome(); window.scrollTo(0,0);
+  if(activeVaga())renderHome(); else renderCatalog();
+  window.scrollTo(0,0);
 }
 
 /* =================================================================
@@ -2091,8 +2121,8 @@ let toastT;
 function toast(msg){const t=$('#toast');t.innerHTML=svg('<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>')+msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
 document.addEventListener('click',e=>{
-  const l=e.target.closest('[data-lesson]'); if(l){openLesson(l.dataset.lesson);return;}
-  const q=e.target.closest('[data-quiz]'); if(q){startQuiz(q.dataset.quiz);return;}
+  const l=e.target.closest('[data-lesson]'); if(l){gReturn=(currentView()==='catalog'?'catalog':'home');openLesson(l.dataset.lesson);return;}
+  const q=e.target.closest('[data-quiz]'); if(q){gReturn=(currentView()==='catalog'?'catalog':'home');startQuiz(q.dataset.quiz);return;}
 });
 
 /* THEME */
