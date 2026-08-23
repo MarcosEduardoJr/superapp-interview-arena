@@ -1479,28 +1479,31 @@ const MODULES = [
   xp:55,
   lesson:[
     {t:'h',x:'Mono-repo vs Multi-repo'},
+    {t:'p',x:'A escolha define como os times colaboram e como o código compartilhado circula. Não há vencedor universal — há trade-offs.'},
     {t:'cmp',head:['','Mono-repo','Multi-repo'],rows:[
       ['Código','Tudo num repositório','Um repo por módulo/componente'],
       ['Mudança cross-módulo','<b>Atômica</b> (um commit)','Difícil — coordenar versões e PRs'],
       ['Autonomia dos times','Menor (acoplamento no repo)','Maior (isolamento, deploy independente)'],
-      ['Versionamento','Implícito (sempre o HEAD)','Explícito (semver + publicação de artefatos)'],
+      ['Versionamento','Implícito (sempre o HEAD)','Explícito (semver + artefatos)'],
       ['CI','Pode ficar pesado','Escopo por repo, mais simples']
     ]},
-    {t:'h',x:'CocoaPods vs SPM (iOS — mas o conceito importa)'},
-    {t:'cmp',head:['','CocoaPods','Swift Package Manager (SPM)'],rows:[
+    {t:'h',x:'CocoaPods vs SPM'},
+    {t:'p',x:'A vaga cita <b>CocoaPods ou SPM</b> (mundo iOS), mas o conceito de gerenciar múltiplos módulos versionados é o que importa — e vale para Android.'},
+    {t:'cmp',head:['','CocoaPods','Swift Package Manager'],rows:[
       ['Origem','Comunidade, mais antigo/maduro','Oficial da Apple, integrado ao Xcode'],
       ['Dependência externa','Precisa de Ruby/gem','Nativo, sem Ruby'],
-      ['Modelo','Centralizado (Podfile, spec repo)','Descentralizado (Package.swift, URLs de git)'],
-      ['Integração','Gera workspace/altera projeto','Nativa no Xcode'],
+      ['Modelo','Centralizado (Podfile, spec repo)','Descentralizado (Package.swift, git)'],
       ['CI','Mais setup (cache do CocoaPods)','Mais simples/limpo']
     ]},
     {t:'h',x:'O equivalente no mundo Android'},
     {t:'code',x:'<span class="cm"># libs.versions.toml — versões centralizadas</span>\n[versions]\ndesignsystem = <span class="cm">"2.4.0"</span>\n\n<span class="cm">// consumir o módulo publicado por versão FIXA (Maven), não por branch</span>\ndependencies {\n  implementation(<span class="cm">"com.superapp:designsystem:2.4.0"</span>)\n}'},
-    {t:'key',x:['<b>Gradle</b> gerencia dependências e módulos; multi-repo Android costuma <b>publicar bibliotecas como artefatos Maven</b> (Nexus/Artifactory) consumidas por semver.','<b>Version catalog</b> (<code>libs.versions.toml</code>) centraliza versões — uma fonte única, sem números mágicos espalhados nos <code>build.gradle</code>.','Alternativas de composição: <b>composite builds</b>, <b>git submodules</b> — cada uma com trade-offs de acoplamento vs isolamento.']},
+    {t:'key',x:['<b>Gradle</b> gerencia dependências; multi-repo Android <b>publica bibliotecas como artefatos Maven</b> (Nexus/Artifactory), consumidas por semver.','<b>Version catalog</b> centraliza as versões numa fonte única.','Composição: <b>composite builds</b> (dev local do módulo sem publicar), <b>git submodules</b> — cada um com seu trade-off.']},
     {t:'h',x:'SemVer & dependency hell'},
-    {t:'p',x:'<b>Semantic Versioning</b> (<code>MAJOR.MINOR.PATCH</code>): MAJOR quebra compatibilidade, MINOR adiciona compatível, PATCH corrige. Consumir por <b>versão fixa publicada</b> (não por branch flutuante) é o que evita “funcionava ontem”.'},
-    {t:'real',x:'SuperApp com múltiplos times/módulos: um módulo de design system e um de autenticação compartilhados. Cada um é versionado e publicado; os apps consomem versões específicas via version catalog. Quando o módulo muda, sobe uma versão nova — os consumidores migram quando puderem, sem quebra surpresa.'},
-    {t:'call',title:'O trade-off central',x:'Multi-repo dá <b>autonomia e isolamento</b>, mas cobra o preço de <b>mudanças atômicas difíceis</b> entre módulos e de disciplina de versionamento. Mono-repo inverte: mudança atômica fácil, autonomia menor.'}
+    {t:'p',x:'<b>Semantic Versioning</b> (<code>MAJOR.MINOR.PATCH</code>): MAJOR quebra compatibilidade, MINOR adiciona compatível, PATCH corrige. O <b>dependency hell</b> aparece quando dois módulos pedem versões transitivas conflitantes da mesma lib — resolva com <b>BOM</b> (platform) ou <code>resolutionStrategy</code>. Consumir por <b>versão fixa publicada</b> (não branch flutuante) evita o "funcionava ontem".'},
+    {t:'h',x:'Contratos entre módulos'},
+    {t:'key',x:['O módulo compartilhado tem uma <b>API pública</b> = contrato. Mudança incompatível → nova <b>MAJOR</b>, não um patch silencioso.','Use <b>deprecation</b> antes de remover: dá aos consumidores tempo de migrar.','Publique changelog; consumidores atualizam a versão <b>quando puderem</b>, não de surpresa.']},
+    {t:'real',x:'SuperApp com múltiplos times: <code>designsystem</code> e <code>auth</code> compartilhados, cada um versionado e publicado no Artifactory; os apps consomem versões específicas via version catalog. Um breaking change vira 3.0.0; quem consome migra no seu tempo — sem quebrar 3 apps de uma vez.'},
+    {t:'call',title:'O trade-off central',x:'Multi-repo dá <b>autonomia e isolamento</b>, mas cobra <b>mudanças atômicas difíceis</b> entre módulos e disciplina de versionamento. Mono-repo inverte: atômico fácil, autonomia menor. Escolha pelo tamanho do time e pelo grau de acoplamento.'}
   ],
   quiz:[
     {type:'cmp',q:'Qual é a diferença <b>chave</b> entre CocoaPods e SPM?',
@@ -1533,23 +1536,29 @@ const MODULES = [
   xp:55,
   lesson:[
     {t:'h',x:'POUR — os 4 princípios'},
-    {t:'key',x:['<b>P</b>erceptível — a informação chega aos sentidos (texto alternativo, contraste, legendas).','<b>O</b>perável — dá para usar por teclado/toque/leitor (foco, alvos, sem armadilhas).','<b>U</b>nderstandable — previsível e claro (labels, mensagens de erro).','<b>R</b>obusto — compatível com <b>tecnologias assistivas</b> (nome, função, valor expostos corretamente).']},
+    {t:'key',x:['<b>P</b>erceptível — a informação chega aos sentidos (texto alternativo, contraste, legendas).','<b>O</b>perável — dá para usar por teclado/toque/leitor (foco, alvos, sem armadilhas).','<b>U</b>nderstandable — previsível e claro (labels, mensagens de erro).','<b>R</b>obusto — compatível com <b>tecnologias assistivas</b> (nome, função e valor expostos corretamente).']},
     {t:'h',x:'Níveis A / AA / AAA'},
-    {t:'p',x:'A é o mínimo, <b>AA</b> é o alvo prático e legal na maioria dos casos, AAA é o mais rigoroso (raramente exigido inteiro). A vaga pede <b>AA</b> — então você precisa saber exatamente o que é AA e o que <em>não</em> é.'},
+    {t:'p',x:'A é o mínimo, <b>AA</b> é o alvo prático e legal na maioria dos casos, AAA é o mais rigoroso (raramente exigido inteiro). A vaga pede <b>AA</b> — então você precisa saber exatamente o que é AA e, principalmente, o que <em>não</em> é (é onde estão as pegadinhas).'},
     {t:'h',x:'Critérios AA que caem em entrevista'},
     {t:'cmp',head:['Critério','Regra AA'],rows:[
-      ['<b>1.4.3</b> Contraste','Texto normal <b>4.5:1</b>; texto grande (≥18pt, ou 14pt bold) <b>3:1</b>'],
+      ['<b>1.4.3</b> Contraste','Texto normal <b>4.5:1</b>; texto grande (≥18pt / 14pt bold) <b>3:1</b>'],
       ['<b>1.4.11</b> Contraste não-textual','Componentes de UI e gráficos <b>3:1</b>'],
-      ['<b>1.4.4</b> Redimensionar texto','Texto escala até <b>200%</b> sem perda de conteúdo/função'],
-      ['<b>1.4.1</b> Uso da cor','Cor não pode ser o <b>único</b> meio de transmitir informação'],
-      ['<b>2.4.7</b> Foco visível','O foco de teclado é sempre visível'],
+      ['<b>1.4.4</b> Redimensionar texto','Escala até <b>200%</b> sem perda de conteúdo/função'],
+      ['<b>1.4.1</b> Uso da cor','Cor não é o <b>único</b> meio de transmitir informação'],
+      ['<b>1.3.1</b> Info & relações','Estrutura (títulos, labels) exposta por semântica, não só visual'],
+      ['<b>2.4.3 / 2.4.7</b> Foco','Ordem de foco lógica e foco sempre visível'],
+      ['<b>3.3.1 / 3.3.2</b> Erros','Erros identificados em texto + labels/instruções nos campos'],
       ['<b>4.1.2</b> Nome/Função/Valor','Todo componente expõe nome, função e valor às ATs']
     ]},
-    {t:'call',title:'A pegadinha do alvo de toque',x:'Muita gente jura que “44px de alvo de toque é WCAG 2.1 AA”. <b>Errado</b>: <b>2.5.5 Target Size (44px) é AAA</b> na WCAG 2.1. Foi a <b>WCAG 2.2</b> que introduziu <b>2.5.8 Target Size (Minimum) = 24px como AA</b>. O Material Design recomenda <b>48dp</b> por boa prática — que é diretriz de plataforma, não o número do critério AA.'},
-    {t:'h',x:'Fazendo na prática (Android / Compose)'},
-    {t:'key',x:['<b>contentDescription</b> descreve imagens/ícones para o TalkBack; use <b>null</b> em imagens <b>puramente decorativas</b> para o leitor <b>ignorá-las</b>.','No Compose: <code>Modifier.semantics { }</code>, <code>contentDescription</code>, <code>Role</code>, <code>onClickLabel</code>, <code>stateDescription</code>, <code>heading()</code>.','Alvo de toque mínimo prático: <b>48dp</b> (<code>Modifier.minimumInteractiveComponentSize()</code>).','Teste com <b>TalkBack</b> e com o <b>Accessibility Scanner</b>; verifique contraste no <b>dark mode</b> também.']},
-    {t:'real',x:'No redesign, um erro de formulário marcado <b>só</b> em vermelho reprova 1.4.1: adicione ícone + texto (“CPF inválido”). Cabeçalhos precisam de <code>heading()</code> para o TalkBack navegar por seções. E revise o contraste dos novos tokens de cor em ambos os temas.'},
-    {t:'code',x:'<span class="cm">// Decorativo: leitor ignora</span>\nImage(painter, contentDescription = <span class="kw">null</span>)\n\n<span class="cm">// Cabeçalho semântico p/ TalkBack</span>\nText(<span class="cm">"Suas faturas"</span>, modifier = Modifier.semantics { heading() })'}
+    {t:'call',title:'A pegadinha do alvo de toque',x:'Muita gente jura que "44px é WCAG 2.1 AA". <b>Errado</b>: <b>2.5.5 Target Size (44px) é AAA</b> na WCAG 2.1. A <b>WCAG 2.2</b> trouxe <b>2.5.8 Target Size (Minimum) = 24px como AA</b>. O Material recomenda <b>48dp</b> por boa prática de plataforma — não é o número do critério AA.'},
+    {t:'h',x:'Fazendo na prática no Compose'},
+    {t:'key',x:['<b>contentDescription</b> descreve imagens/ícones para o TalkBack; use <b>null</b> em imagens <b>decorativas</b> para o leitor <b>ignorá-las</b>.','Semântica: <code>Modifier.semantics { }</code>, <code>Role</code>, <code>onClickLabel</code>, <code>stateDescription</code>, <code>heading()</code>, <code>liveRegion</code>.','<code>mergeDescendants = true</code> agrupa um card num único foco de leitura, em vez de tabular por cada texto.','Alvo mínimo prático: <b>48dp</b> (<code>Modifier.minimumInteractiveComponentSize()</code>).']},
+    {t:'code',x:'<span class="cm">// Decorativo: leitor ignora</span>\nImage(painter, contentDescription = <span class="kw">null</span>)\n\n<span class="cm">// Cabeçalho semântico p/ o TalkBack navegar por seções</span>\nText(<span class="cm">"Suas faturas"</span>, Modifier.semantics { heading() })\n\n<span class="cm">// Estado descrito para o leitor</span>\nModifier.semantics { stateDescription = <span class="kw">if</span> (pago) <span class="cm">"pago"</span> <span class="kw">else</span> <span class="cm">"em aberto"</span> }'},
+    {t:'h',x:'Como o TalkBack navega'},
+    {t:'p',x:'O usuário do TalkBack varre a tela por <b>swipe</b> (próximo/anterior) ou pula por <b>headings</b>. Por isso <b>ordem de foco</b> lógica, <b>headings</b> nas seções e <b>roles</b> corretos (botão, checkbox) são o que torna a tela navegável — não basta "ter contentDescription". Anúncios dinâmicos (ex.: "3 itens no carrinho") usam <code>liveRegion</code>.'},
+    {t:'h',x:'Testando acessibilidade'},
+    {t:'key',x:['<b>Accessibility Scanner</b> (app do Google) aponta contraste, alvos pequenos e labels faltando.','<b>Compose UI Test</b> por semântica (<code>onNodeWithContentDescription</code>) testa a11y junto com a função.','Nada substitui <b>usar com TalkBack</b> ligado e checar contraste também no <b>dark mode</b>.']},
+    {t:'real',x:'No redesign, erro de formulário marcado <b>só</b> em vermelho reprova 1.4.1: adicione ícone + texto ("CPF inválido") e associe a mensagem ao campo (3.3.1). Cabeçalhos ganham <code>heading()</code>; e o contraste dos novos tokens de cor é revisado nos dois temas.'}
   ],
   quiz:[
     {type:'core',q:'Qual é a razão de contraste mínima <b>AA</b> para <b>texto normal</b>?',
@@ -1603,16 +1612,23 @@ const MODULES = [
       ['Entrega','ID/Access/Refresh token','Credenciais IAM temporárias (via STS)']
     ]},
     {t:'call',title:'A regra de ouro de segurança',x:'<b>NUNCA</b> embuta chaves IAM de longa duração (Access Key/Secret) no app — elas podem ser extraídas do APK. O app autentica no <b>User Pool</b>, e o <b>Identity Pool</b> entrega <b>credenciais temporárias</b> com uma <b>IAM Role de menor privilégio</b> para acessar S3/DynamoDB.'},
+    {t:'h',x:'IAM & credenciais temporárias'},
+    {t:'p',x:'O <b>Identity Pool</b> usa o <b>STS</b> para trocar a identidade autenticada por <b>credenciais temporárias</b> (expiram) atreladas a uma <b>IAM Role</b>. Essa role tem uma <b>policy</b> de <b>menor privilégio</b> — ex.: só <code>PutObject</code> no prefixo do próprio usuário no bucket. Nada de chave permanente no app.'},
     {t:'h',x:'API Gateway + Lambda vs AppSync'},
-    {t:'key',x:['<b>API Gateway + Lambda</b> — APIs REST/HTTP serverless, pague por invocação. Boa para endpoints sob demanda.','<b>AppSync</b> — GraphQL gerenciado, com <b>subscriptions em tempo real</b> e <b>sincronização offline</b> — encaixa bem em apps mobile com dados vivos.']},
-    {t:'h',x:'SNS vs SQS vs Pinpoint'},
+    {t:'key',x:['<b>API Gateway + Lambda</b> — APIs REST/HTTP serverless, paga por invocação. Boa para endpoints sob demanda e lógica custom.','<b>AppSync</b> — GraphQL gerenciado, com <b>subscriptions em tempo real</b> e <b>sincronização offline</b> — encaixa em apps mobile com dados vivos.']},
+    {t:'h',x:'Amplify: o SDK mobile'},
+    {t:'key',x:['<b>Amplify</b> é o framework/SDK que amarra Cognito, S3, AppSync e Pinpoint no app com pouca configuração.','<b>Amplify DataStore</b> dá um modelo local sincronizado (offline-first) sobre AppSync.','Ele acelera o comum, mas você ainda precisa entender IAM e os serviços por baixo.']},
+    {t:'h',x:'Push & mensageria: SNS, SQS, Pinpoint'},
     {t:'cmp',head:['','Modelo','Uso'],rows:[
       ['<b>SNS</b>','Pub/Sub (push, fan-out)','Notificar N assinantes; push básico'],
       ['<b>SQS</b>','Fila (pull, desacoplamento)','Processar mensagens de forma assíncrona/resiliente'],
       ['<b>Pinpoint</b>','Engajamento','Push + e-mail/SMS com <b>segmentação e analytics</b>']
     ]},
-    {t:'real',x:'SuperApp típico: login no <b>Cognito User Pool</b>; <b>Identity Pool</b> dá credencial temporária para subir comprovantes no <b>S3</b>; backend de faturas em <b>API Gateway + Lambda + DynamoDB</b>; push segmentado e métricas via <b>Pinpoint</b>. Tudo com IAM de menor privilégio.'},
-    {t:'call',title:'Modelo de responsabilidade compartilhada',x:'A AWS protege a <b>nuvem</b> (infra); você protege <b>na</b> nuvem (IAM, configuração de bucket, criptografia, quem acessa o quê). Bucket S3 público por engano é responsabilidade sua, não da AWS.'}
+    {t:'p',x:'No Android, o push físico ainda chega pelo <b>FCM</b> (Firebase Cloud Messaging) — SNS/Pinpoint entregam <b>através</b> do FCM. Pinpoint some a isso segmentação, campanhas e métricas.'},
+    {t:'h',x:'S3 & DynamoDB'},
+    {t:'key',x:['<b>S3</b>: para upload seguro sem expor credencial, o backend gera uma <b>presigned URL</b> temporária — o app sobe direto para ela.','<b>DynamoDB</b> (NoSQL) escala por <b>access pattern</b>: modele a tabela pela consulta, não pela normalização relacional.','<b>CloudFront</b> (CDN) na frente do S3 para servir mídia rápido e barato.']},
+    {t:'call',title:'Responsabilidade compartilhada & custo',x:'A AWS protege a <b>nuvem</b> (infra); você protege <b>na</b> nuvem (IAM, config de bucket, criptografia). Bucket S3 público por engano é responsabilidade <b>sua</b>. E serverless é pago por uso — cuidado com chamadas em loop no cliente que viram conta alta.'},
+    {t:'real',x:'SuperApp típico: login no <b>Cognito User Pool</b>; <b>Identity Pool</b> dá credencial temporária (STS) para subir comprovantes no <b>S3</b> (via presigned URL); faturas em <b>API Gateway + Lambda + DynamoDB</b>; push segmentado + métricas via <b>Pinpoint/FCM</b>. Tudo com IAM de menor privilégio.'}
   ],
   quiz:[
     {type:'trap',q:'Como o app mobile deve acessar um bucket <b>S3</b> de forma segura?',
@@ -1645,22 +1661,26 @@ const MODULES = [
   xp:55,
   lesson:[
     {t:'h',x:'O pipeline de CI/CD de um app Android'},
-    {t:'code',x:'<span class="cm"># .gitlab-ci.yml</span>\nstages: [build, test, quality]\n\ntest:\n  stage: test\n  script: ./gradlew testDebugUnitTest\n\nquality:\n  stage: quality\n  script: ./gradlew sonar   <span class="cm"># o quality gate barra o merge se falhar</span>'},
-    {t:'p',x:'Estágios típicos: <b>build</b> (Gradle) → <b>testes</b> (unitários) → <b>qualidade</b> (lint/detekt + SonarQube gate) → <b>package</b> (APK/AAB assinado) → <b>deploy</b> (Firebase App Distribution / Play). Cada estágio é um portão; falhou, para.'},
+    {t:'p',x:'Estágios típicos: <b>build</b> (Gradle) → <b>testes</b> (unitários) → <b>qualidade</b> (lint/detekt + SonarQube gate) → <b>package</b> (AAB assinado) → <b>deploy</b> (Firebase App Distribution / Play). Cada estágio é um <b>portão</b>: falhou, para. Cache do Gradle/dependências acelera o pipeline.'},
+    {t:'code',x:'<span class="cm"># .gitlab-ci.yml</span>\nstages: [build, test, quality, package]\n\ntest:\n  stage: test\n  script: ./gradlew testDebugUnitTest\n\nquality:\n  stage: quality\n  script: ./gradlew detekt sonar   <span class="cm"># quality gate barra o merge se falhar</span>\n\npackage:\n  stage: package\n  script: ./gradlew bundleRelease  <span class="cm"># assina o AAB (chave em variavel protegida)</span>\n  rules: [{ if: <span class="cm">"$CI_COMMIT_TAG"</span> }]'},
+    {t:'h',x:'CI, CD e estratégia de branch'},
+    {t:'key',x:['<b>CI</b> (Continuous Integration): integra e testa cada push cedo, no MR.','<b>CD</b>: Continuous <b>Delivery</b> deixa pronto para publicar (deploy manual); Continuous <b>Deployment</b> publica automático.','<b>Trunk-based</b> (branches curtos, merge frequente) casa melhor com CI do que GitFlow com branches longos.']},
     {t:'h',x:'GitLab CI vs Jenkins'},
     {t:'cmp',head:['','GitLab CI','Jenkins'],rows:[
       ['Configuração','<code>.gitlab-ci.yml</code> (YAML) versionado no repo','<code>Jenkinsfile</code> (Groovy) ou UI; muitos plugins'],
       ['Arquitetura','Integrado ao SCM + runners','Servidor central self-hosted + agentes'],
-      ['Ecossistema','Cloud-native, tudo-em-um (SCM+CI+registry)','Muito flexível via plugins, mais legado'],
+      ['Ecossistema','Cloud-native, tudo-em-um (SCM+CI+registry)','Flexível via plugins, mais legado'],
       ['Manutenção','Menor (gerenciado/integrado)','Maior (servidor, plugins, atualizações)']
     ]},
     {t:'h',x:'SonarQube & o Quality Gate'},
-    {t:'p',x:'SonarQube faz <b>análise estática</b>: bugs, vulnerabilidades, code smells, duplicação e cobertura. O <b>Quality Gate</b> é um conjunto de condições que, se não atendidas, <b>bloqueia o merge</b>.'},
-    {t:'key',x:['<b>Clean as You Code</b>: o gate foca no <b>código novo/alterado</b> (new code), não em reprovar todo o legado.','Métricas típicas do gate: 0 novos bugs/vulnerabilidades, cobertura mínima no código novo, duplicação abaixo do limite.','Integra ao MR/PR: o status do gate aparece e pode barrar o merge.']},
-    {t:'call',title:'Por que “new code”?',x:'Impor 80% de cobertura num legado gigante trava o time e gera testes-teatro. O modelo <b>clean as you code</b> exige qualidade no que você <b>toca agora</b> — a base melhora de forma incremental, sem paralisar entregas.'},
+    {t:'p',x:'SonarQube faz <b>análise estática</b>: bugs, vulnerabilidades, <b>security hotspots</b>, code smells, duplicação e cobertura. O <b>Quality Gate</b> é um conjunto de condições que, se não atendidas, <b>bloqueia o merge</b>.'},
+    {t:'key',x:['<b>Clean as You Code</b>: o gate foca no <b>código novo/alterado</b>, não em reprovar todo o legado.','Métricas típicas: 0 novos bugs/vulnerabilidades, cobertura mínima no new code, duplicação abaixo do limite.','O status do gate aparece no MR e pode barrar o merge — automatiza o que o humano não precisa revisar na mão.']},
+    {t:'call',title:'Por que "new code"',x:'Impor 80% de cobertura num legado gigante trava o time e gera testes-teatro. Clean as you code exige qualidade no que você <b>toca agora</b> — a base melhora incremental, sem paralisar entregas.'},
+    {t:'h',x:'Assinatura & segredos no pipeline'},
+    {t:'key',x:['A <b>chave de assinatura</b> e tokens (Play, Firebase) ficam em <b>variáveis protegidas/secrets</b> do CI — <b>nunca</b> no repo.','Deploy automatizado com <b>Gradle Play Publisher</b> ou <b>Fastlane</b> a partir do CI.','QA recebe builds por <b>Firebase App Distribution</b>; produção via Play (staged rollout).']},
     {t:'h',x:'Jira — rastreabilidade'},
-    {t:'p',x:'Gestão ágil: épicos, histórias, tarefas, bugs em boards (Scrum/Kanban) com workflow de status. <b>Smart commits</b> e integrações ligam commits/MRs a issues, dando rastreabilidade do requisito ao merge.'},
-    {t:'real',x:'No SuperApp: cada história do Jira vira um branch; o MR no GitLab dispara pipeline (build → testes → Sonar gate); só com gate verde e code review aprovado o merge acontece; o deploy distribui o AAB para QA via Firebase. O ticket do Jira fecha via smart commit.'}
+    {t:'p',x:'Gestão ágil: épicos, histórias, tarefas e bugs em boards (Scrum/Kanban) com workflow de status. <b>Smart commits</b> e integrações ligam commits/MRs às issues, dando <b>rastreabilidade</b> do requisito ao merge.'},
+    {t:'real',x:'No SuperApp: cada história do Jira vira um branch; o MR no GitLab dispara o pipeline (build → testes → detekt → Sonar gate); só com gate verde e review aprovado o merge acontece; o AAB assinado vai para QA via Firebase e para produção via Play. O ticket fecha por smart commit. Num fluxo agentic SDLC, o agente abre o MR — os gates continuam sendo a autoridade.'}
   ],
   quiz:[
     {type:'cmp',q:'Diferença arquitetural central entre <b>GitLab CI</b> e <b>Jenkins</b>?',
@@ -1757,8 +1777,16 @@ const MODULES = [
   xp:50,
   lesson:[
     {t:'h',x:'Scrum: papéis, eventos, artefatos'},
-    {t:'key',x:['<b>Papéis</b>: Product Owner (prioriza o backlog/valor), Scrum Master (facilita, remove impedimentos), Dev Team (constrói).','<b>Eventos</b>: Sprint Planning, Daily, Sprint Review, Retrospectiva — todos timeboxed.','<b>Artefatos</b>: Product Backlog, Sprint Backlog, Increment.']},
+    {t:'key',x:['<b>Papéis</b>: Product Owner (prioriza o backlog/valor), Scrum Master (facilita, remove impedimentos), Dev Team (constrói).','<b>Eventos</b>: Sprint Planning, Daily, Sprint Review, Retrospectiva (+ Refinement) — todos timeboxed.','<b>Artefatos</b>: Product Backlog, Sprint Backlog, Increment (cada um com seu compromisso: meta do produto, meta da sprint, DoD).']},
     {t:'call',title:'A daily NÃO é relatório para o chefe',x:'O objetivo da <b>daily</b> é o time <b>sincronizar</b> e replanejar o dia rumo à meta da sprint, expondo <b>impedimentos</b>. Não é prestar contas de status para um gestor — esse é o mal-entendido clássico.'},
+    {t:'h',x:'Os eventos em detalhe'},
+    {t:'cmp',head:['Evento','Para quê'],rows:[
+      ['<b>Planning</b>','Definir a meta da sprint e o que entra no sprint backlog'],
+      ['<b>Daily</b>','Sincronizar e replanejar o dia; levantar impedimentos'],
+      ['<b>Refinement</b>','Preparar/estimar itens do backlog para as próximas sprints'],
+      ['<b>Review</b>','Demonstrar o incremento e colher feedback dos stakeholders'],
+      ['<b>Retrospectiva</b>','Melhorar o processo do time (ações concretas)']
+    ]},
     {t:'h',x:'Review vs Retrospectiva'},
     {t:'cmp',head:['','Sprint Review','Retrospectiva'],rows:[
       ['Foco','O <b>produto</b>: demonstrar o incremento','O <b>processo</b>: como o time trabalhou'],
@@ -1773,10 +1801,14 @@ const MODULES = [
       ['Métricas','Velocity','Lead time, cycle time'],
       ['Muda no meio','Evita mudar a sprint','Mudança contínua permitida']
     ]},
-    {t:'p',x:'<b>WIP limit</b> (limite de trabalho em progresso) força o time a <b>terminar antes de começar</b>, expondo gargalos e reduzindo troca de contexto. <b>DoD</b> (Definition of Done) é o padrão de pronto do time; <b>critério de aceite</b> é específico daquela história.'},
+    {t:'p',x:'<b>WIP limit</b> força "terminar antes de começar", expondo gargalos e cortando troca de contexto. "Pare de começar, comece a terminar."'},
+    {t:'h',x:'Estimativa, métricas, DoD & DoR'},
+    {t:'key',x:['<b>Story points</b> (planning poker) medem esforço/complexidade relativa, não horas.','<b>Velocity</b> (Scrum) e <b>lead/cycle time</b> (Kanban) são para o time se planejar — não para cobrar indivíduos.','<b>DoR</b> (Definition of Ready) = pronto para <b>entrar</b>; <b>DoD</b> (Definition of Done) = pronto para <b>sair</b>; <b>critério de aceite</b> = comportamento específico da história.']},
+    {t:'h',x:'O que a vaga pede: comunicação, autonomia, resiliência'},
+    {t:'key',x:['<b>Comunicação</b>: expor bloqueio cedo, escrever MR/spec claros, alinhar com times multidisciplinares (design, backend, QA).','<b>Autonomia</b>: destravar sozinho, decidir com dados, pedir ajuda no momento certo — não sumir nem travar.','<b>Resiliência</b>: manter qualidade sob pressão (release travado, requisito mudou) e aprender com o erro.']},
     {t:'h',x:'Comportamental: use STAR'},
-    {t:'p',x:'Para autonomia, resiliência, comunicação e colaboração, responda com <b>STAR</b>: <b>S</b>ituação, <b>T</b>arefa, <b>A</b>ção (o que <em>você</em> fez), <b>R</b>esultado (mensurável). Fale em primeira pessoa e feche com número/impacto.'},
-    {t:'real',x:'“Conte sobre um cenário adverso.” Ruim: “o projeto foi difícil mas deu certo”. Bom (STAR): situação (release travado por flaky tests), tarefa (destravar sem baixar qualidade), ação (isolei os testes, injetei dispatcher, estabilizei o pipeline), resultado (suíte 30% mais rápida, 0 flaky em 2 sprints). Isso é resiliência demonstrada, não afirmada.'}
+    {t:'p',x:'Responda com <b>STAR</b>: <b>S</b>ituação, <b>T</b>arefa, <b>A</b>ção (o que <em>você</em> fez, em 1ª pessoa), <b>R</b>esultado (mensurável). Perguntas comuns: um conflito no time, um erro que você cometeu, um prazo apertado, um feedback difícil — todas pedem um caso concreto, não adjetivos.'},
+    {t:'real',x:'"Conte sobre um cenário adverso." Ruim: "o projeto foi difícil mas deu certo". Bom (STAR): situação (release travado por flaky tests), tarefa (destravar sem baixar qualidade), ação (isolei os testes, injetei dispatcher, estabilizei o pipeline), resultado (suíte 30% mais rápida, 0 flaky em 2 sprints). Resiliência demonstrada, não afirmada.'}
   ],
   quiz:[
     {type:'core',q:'Qual é o real objetivo da <b>daily scrum</b>?',
@@ -1809,7 +1841,7 @@ const MODULES = [
   xp:50,
   lesson:[
     {t:'h',x:'JVM & Java × Kotlin'},
-    {t:'p',x:'Java e Kotlin compilam para <b>bytecode da JVM</b> e <b>interoperam</b> no mesmo projeto. Kotlin traz null safety, menos verbosidade e corrotinas; Java tem o ecossistema mais maduro e onipresente no backend.'},
+    {t:'p',x:'Java e Kotlin compilam para <b>bytecode da JVM</b> e <b>interoperam</b> no mesmo projeto. Kotlin traz null safety, menos verbosidade e corrotinas; Java tem o ecossistema mais maduro e onipresente no backend. Saber Java é diferencial porque o backend que alimenta o app costuma ser Spring/Java.'},
     {t:'cmp',head:['','Java','Kotlin'],rows:[
       ['Null safety','Em runtime (NPE)','No sistema de tipos (compile-time)'],
       ['Verbosidade','Maior','Menor (data class, inferência)'],
@@ -1817,25 +1849,30 @@ const MODULES = [
       ['Interop','—','100% com Java']
     ]},
     {t:'h',x:'Spring Boot: IoC & DI'},
-    {t:'code',x:'<span class="kw">@RestController</span>\n<span class="kw">class</span> FaturaController {\n  <span class="kw">private final</span> FaturaService service;\n  FaturaController(FaturaService service) { <span class="kw">this</span>.service = service; } <span class="cm">// injeção por construtor</span>\n\n  <span class="kw">@GetMapping</span>(<span class="cm">"/faturas/{id}"</span>)\n  <span class="kw">public</span> Fatura get(<span class="kw">@PathVariable</span> String id) {\n    <span class="kw">return</span> service.buscar(id);\n  }\n}'},
-    {t:'p',x:'O núcleo é <b>Inversão de Controle</b>: o container cria e injeta as dependências. Prefira <b>injeção por construtor</b> (dependências explícitas, imutáveis, testáveis) em vez de <code>@Autowired</code> em campo.'},
+    {t:'p',x:'O núcleo é <b>Inversão de Controle</b>: o container cria e injeta as dependências (o "IoC container"). O Spring Boot soma <b>autoconfiguração</b> e <b>starters</b> (dependências prontas). Prefira <b>injeção por construtor</b> — dependências explícitas, <code>final</code>, testáveis — em vez de <code>@Autowired</code> em campo.'},
+    {t:'code',x:'<span class="kw">@RestController</span>\n<span class="kw">class</span> FaturaController {\n  <span class="kw">private final</span> FaturaService service;\n  FaturaController(FaturaService service) { <span class="kw">this</span>.service = service; } <span class="cm">// DI por construtor</span>\n\n  <span class="kw">@GetMapping</span>(<span class="cm">"/faturas/{id}"</span>)\n  <span class="kw">public</span> FaturaDTO get(<span class="kw">@PathVariable</span> String id) {\n    <span class="kw">return</span> service.buscar(id);\n  }\n}'},
+    {t:'h',x:'Camadas & estereótipos'},
     {t:'cmp',head:['Anotação','Papel'],rows:[
-      ['<code>@RestController</code>','Controller REST (= @Controller + @ResponseBody): retorna dados (JSON), não views'],
+      ['<code>@RestController</code>','REST (= @Controller + @ResponseBody): retorna JSON, não views'],
       ['<code>@Service</code>','Regra de negócio'],
       ['<code>@Repository</code>','Acesso a dados (+ tradução de exceções)'],
       ['<code>@Component</code> / <code>@Bean</code>','Bean genérico / método que produz um bean']
     ]},
+    {t:'call',title:'DTO ≠ entidade',x:'Não exponha a <b>entidade</b> do banco direto no JSON: use um <b>DTO</b> para o contrato da API. Isso desacopla o schema interno da API pública e evita vazar campos sensíveis — o mesmo espírito de "contrato sob medida".'},
     {t:'h',x:'REST & idempotência'},
-    {t:'p',x:'<b>Idempotente</b> = repetir a chamada não muda o resultado além da primeira. <b>GET, PUT, DELETE</b> são idempotentes; <b>POST não é</b> (dois POSTs = dois recursos). Isso guia retries seguros no app: pode repetir um PUT, mas um POST precisa de chave de idempotência.'},
+    {t:'p',x:'<b>Idempotente</b> = repetir a chamada não muda o resultado além da primeira. <b>GET, PUT, DELETE</b> são idempotentes; <b>POST não é</b> (dois POSTs = dois recursos). Guia retries seguros no app: pode repetir um PUT, mas um POST precisa de <b>chave de idempotência</b>.'},
     {t:'cmp',head:['Método','Idempotente?','Uso'],rows:[
-      ['GET','Sim','Ler'],
-      ['PUT','Sim','Substituir/atualizar por completo'],
-      ['DELETE','Sim','Remover'],
-      ['POST','<b>Não</b>','Criar / ação não-repetível']
+      ['GET','Sim','Ler (200; 404 se não existe)'],
+      ['POST','<b>Não</b>','Criar (201 Created)'],
+      ['PUT','Sim','Substituir por completo (200/204)'],
+      ['DELETE','Sim','Remover (204)']
     ]},
+    {t:'p',x:'Status certos importam: <b>2xx</b> sucesso, <b>4xx</b> erro do cliente (400 validação, 401 não autenticado, 403 sem permissão, 404 inexistente, 409 conflito), <b>5xx</b> erro do servidor. O app decide o comportamento pelo código.'},
+    {t:'h',x:'JPA/Hibernate & transações'},
+    {t:'key',x:['<code>@Entity</code> mapeia a tabela; o repositório (Spring Data JPA) gera CRUD a partir da interface.','<code>@Transactional</code> torna o método atômico — commit no fim, rollback em exceção.','Cuidado com o <b>N+1</b>: carregar uma lista e disparar uma query por item (lazy loading) — resolva com <code>join fetch</code>/EntityGraph.']},
     {t:'h',x:'O padrão BFF (Backend for Frontend)'},
-    {t:'p',x:'Um <b>BFF</b> é um backend dedicado ao cliente (o app Android), que <b>agrega</b> vários microserviços e entrega exatamente o payload que a tela precisa — menos round-trips, menos over-fetching, contrato sob medida para o mobile.'},
-    {t:'real',x:'No SuperApp, um BFF em Spring Boot compõe dados de faturas, perfil e ofertas numa só resposta para a home redesenhada — em vez de o app fazer 3 chamadas e montar tudo no cliente. O time mobile ganha um contrato estável e otimizado para a jornada.'}
+    {t:'p',x:'Um <b>BFF</b> é um backend dedicado ao cliente (o app Android) que <b>agrega</b> vários microserviços e entrega exatamente o payload da tela — menos round-trips, menos over-fetching, contrato sob medida. Alternativa/parente: GraphQL/AppSync, onde o cliente pede os campos.'},
+    {t:'real',x:'No SuperApp, um BFF em Spring Boot compõe faturas, perfil e ofertas numa só resposta para a home redesenhada — em vez de o app fazer 3 chamadas e montar no cliente. O time mobile ganha um contrato estável e otimizado. Testes com JUnit/Mockito e <code>@SpringBootTest</code>; saúde exposta pelo <b>Actuator</b>.'}
   ],
   quiz:[
     {type:'core',q:'No Spring, por que preferir <b>injeção por construtor</b> a <code>@Autowired</code> em campo?',
