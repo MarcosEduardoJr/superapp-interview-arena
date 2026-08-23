@@ -1,0 +1,11 @@
+# Site estático de arquivo único — sem build.
+[build]
+  publish = "."
+  command = ""
+
+# cache leve; index.html sempre revalidado
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
