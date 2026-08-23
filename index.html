@@ -1083,14 +1083,22 @@ const MODULES = [
   xp:50,
   lesson:[
     {t:'h',x:'Single-Activity & o back stack'},
-    {t:'p',x:'A arquitetura moderna é <b>single-Activity</b>: uma Activity hospeda um <code>NavHost</code> e as telas são destinos (composables ou fragments). O <b>NavController</b> gerencia o <b>back stack</b>. Ganho: transições consistentes, escopo de estado claro, deep links centralizados.'},
+    {t:'p',x:'A arquitetura moderna é <b>single-Activity</b>: uma Activity hospeda um <code>NavHost</code> e as telas são destinos (composables ou fragments). O <b>NavController</b> gerencia o <b>back stack</b> — a pilha de destinos que o "voltar" desempilha. Ganho: transições consistentes, escopo de estado claro e deep links centralizados, em vez de dezenas de Activities.'},
     {t:'h',x:'Compose Navigation'},
     {t:'code',x:'NavHost(nav, startDestination = <span class="cm">"lista"</span>) {\n  composable(<span class="cm">"lista"</span>) {\n    Lista(onItem = { id -&gt; nav.navigate(<span class="cm">"fatura/$id"</span>) })\n  }\n  composable(<span class="cm">"fatura/{id}"</span>) { back -&gt;\n    <span class="kw">val</span> id = back.arguments?.getString(<span class="cm">"id"</span>)  <span class="cm">// passa id, não o objeto</span>\n    FaturaTela(id)\n  }\n}'},
-    {t:'key',x:['<code>NavHost(navController, startDestination)</code> define o grafo; <code>composable("rota")</code> registra cada destino.','<code>navController.navigate("rota")</code> empilha; <code>popBackStack()</code> desempilha; <code>launchSingleTop</code> evita duplicar o topo.','Argumentos vão na rota (<code>"detalhe/{id}"</code>) e devem ser <b>pequenos e serializáveis</b>.','APIs <b>type-safe</b> (rotas por objetos/serialization) eliminam erros de string de rota.']},
-    {t:'call',title:'Regra de ouro dos argumentos',x:'Passe <b>ids</b>, não objetos. Argumentos de navegação vão para um Bundle (limite de tamanho, precisa ser serializável) e acoplam telas. A tela de destino recebe o <code>id</code> e busca os dados na sua própria fonte (repository/ViewModel).'},
+    {t:'key',x:['<code>NavHost(navController, startDestination)</code> define o grafo; <code>composable("rota")</code> registra cada destino.','<code>navigate("rota")</code> empilha; <code>popBackStack()</code> desempilha.','O <code>hiltViewModel()</code> num destino tem escopo <b>daquele destino</b> no back stack.']},
+    {t:'h',x:'Argumentos: passe id, não objeto'},
+    {t:'call',title:'Regra de ouro',x:'Passe <b>ids</b>, não objetos. Argumentos vão para um Bundle (tamanho limitado — risco de <code>TransactionTooLarge</code> — e precisam ser serializáveis) e acoplam as telas ao modelo. O destino recebe o <code>id</code> e carrega os dados na própria fonte (repository/ViewModel).'},
+    {t:'h',x:'Navegação type-safe'},
+    {t:'p',x:'Rotas por <b>string</b> (<code>"fatura/{id}"</code>) falham em runtime se você errar o nome ou o tipo do argumento. As APIs <b>type-safe</b> (rotas por objetos serializáveis, Navigation Compose 2.8+) movem esses erros para o <b>compilador</b> — some uma classe inteira de bugs de rota.'},
+    {t:'h',x:'Grafos aninhados & bottom nav'},
+    {t:'key',x:['<b>Nested graphs</b> agrupam fluxos (ex.: todo o onboarding num subgrafo) com um startDestination próprio.','Bottom navigation: cada aba tem seu back stack; use <code>saveState</code>/<code>restoreState</code> para não perder a rolagem ao trocar de aba.','Escopo de ViewModel pode ser amarrado ao grafo (dados compartilhados entre telas de um fluxo).']},
+    {t:'h',x:'Gerenciando o back stack'},
+    {t:'code',x:'nav.navigate(<span class="cm">"home"</span>) {\n  popUpTo(<span class="cm">"login"</span>) { inclusive = <span class="kw">true</span> }  <span class="cm">// tira o login da pilha</span>\n  launchSingleTop = <span class="kw">true</span>              <span class="cm">// não duplica o topo</span>\n}'},
+    {t:'p',x:'<code>popUpTo</code> + <code>inclusive</code> limpa destinos ao navegar (ex.: após login, não deixar o usuário "voltar" para a tela de login). <code>launchSingleTop</code> evita empilhar a mesma tela duas vezes.'},
     {t:'h',x:'Deep links'},
-    {t:'p',x:'Um <b>deep link</b> abre um destino específico a partir de uma URL/notification (<code>app://fatura/123</code>). No Compose Nav, declara-se <code>deepLinks</code> no <code>composable</code>; no XML, no nav graph. Essencial para push notifications que levam direto a uma tela.'},
-    {t:'real',x:'Push "sua fatura venceu" deve abrir a fatura certa: um deep link <code>superapp://fatura/{id}</code> leva ao destino, que usa o <code>id</code> para carregar a fatura. Passar o objeto fatura inteiro no intent/args seria frágil e estouraria o limite do Bundle.'}
+    {t:'p',x:'Um <b>deep link</b> abre um destino específico a partir de uma URL/notification. Declare <code>deepLinks</code> no destino. <b>App Links</b> (https verificado) abrem seu app direto do link web. Essencial para push que leva a uma tela.'},
+    {t:'real',x:'Push "sua fatura venceu" deve abrir a fatura certa: <code>superapp://fatura/{id}</code> navega ao destino, que usa o <code>id</code> para carregar os dados. Passar o objeto inteiro no intent seria frágil e estouraria o Bundle.'}
   ],
   quiz:[
     {type:'trap',q:'Ao navegar da lista para o detalhe, um dev passa o objeto <code>Fatura</code> completo como argumento de navegação. Por que isso é ruim?',
@@ -1225,20 +1233,24 @@ const MODULES = [
   subtitle:'Sincronizar dados, subir comprovantes, tracking — trabalho em background moderno tem regras rígidas. Escolher a ferramenta errada é bug garantido.',
   xp:55,
   lesson:[
-    {t:'h',x:'O SO restringe background'},
-    {t:'p',x:'Desde o Android 8, apps em background têm <b>limites</b> de execução; o <b>Doze</b> e App Standby adiam trabalho para poupar bateria. Uma <code>Thread</code> ou coroutine solta <b>morre</b> quando o processo é encerrado — não é confiável para trabalho que precisa acontecer.'},
+    {t:'h',x:'Por que o SO restringe o background'},
+    {t:'p',x:'Bateria. Desde o Android 8 os apps em background têm <b>limites de execução</b>; o <b>Doze</b> (tela apagada, parado) e o <b>App Standby</b> adiam trabalho e rede em janelas de manutenção. Uma <code>Thread</code>/coroutine solta <b>morre</b> quando o SO encerra o processo — e não volta. Nada que "precisa acontecer" pode depender dela.'},
     {t:'h',x:'A ferramenta certa para cada caso'},
     {t:'cmp',head:['Precisa','Ferramenta'],rows:[
-      ['Trabalho <b>garantido</b> e deferível (sobrevive a fechar app/reboot)','<b>WorkManager</b>'],
-      ['Trabalho <b>contínuo</b>, agora, visível ao usuário','<b>Foreground Service</b> (com notificação)'],
+      ['<b>Garantido</b> e deferível (sobrevive a fechar app/reboot)','<b>WorkManager</b>'],
+      ['<b>Contínuo</b>, agora, visível ao usuário','<b>Foreground Service</b> (com notificação)'],
       ['Disparo em <b>horário exato</b>','<b>AlarmManager</b> (exact alarm)'],
-      ['Enquanto a tela/app está viva','Coroutine no viewModelScope']
+      ['Enquanto a tela/app está viva','Coroutine em <code>viewModelScope</code>']
     ]},
-    {t:'h',x:'WorkManager'},
-    {t:'code',x:'<span class="kw">class</span> UploadWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {\n  <span class="kw">override suspend fun</span> doWork(): Result =\n    <span class="kw">if</span> (enviarComprovante()) Result.success() <span class="kw">else</span> Result.retry()\n}\n\n<span class="kw">val</span> req = OneTimeWorkRequestBuilder&lt;UploadWorker&gt;()\n  .setConstraints(Constraints(requiredNetworkType = NetworkType.CONNECTED))\n  .build()\nWorkManager.getInstance(ctx).enqueue(req)  <span class="cm">// garantido, sobrevive a fechar o app</span>'},
-    {t:'key',x:['Garante execução mesmo após o app fechar ou o device reiniciar; escolhe o mecanismo por trás conforme a API.','<b>Constraints</b>: só com rede, só carregando, só com bateria ok.','<b>Chaining</b> (encadear works), <b>periodic</b>, <b>unique work</b> (evitar duplicar), <b>backoff</b> em falha.','<code>CoroutineWorker</code> integra com coroutines.']},
-    {t:'call',title:'WorkManager não é para horário exato',x:'WorkManager é para trabalho <b>garantido e deferível</b> — o SO pode agrupar/adiar por bateria. Se você precisa disparar num instante preciso (ex.: alarme), use <b>AlarmManager</b> com exact alarm; para contínuo e imediato (player, rastreio de corrida), <b>foreground service</b>.'},
-    {t:'real',x:'Upload de um comprovante que <b>não pode se perder</b> mesmo se o usuário fechar o app: WorkManager com constraint de rede + backoff. Rastreamento de entrega em tempo real com o app aberto e ícone na barra: foreground service. Sincronização "quando der, com Wi-Fi": WorkManager periódico com constraint.'}
+    {t:'h',x:'WorkManager — trabalho garantido'},
+    {t:'code',x:'<span class="kw">class</span> UploadWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {\n  <span class="kw">override suspend fun</span> doWork(): Result =\n    <span class="kw">if</span> (enviarComprovante()) Result.success() <span class="kw">else</span> Result.retry()\n}\n\n<span class="kw">val</span> req = OneTimeWorkRequestBuilder&lt;UploadWorker&gt;()\n  .setConstraints(Constraints(requiredNetworkType = NetworkType.CONNECTED))\n  .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, SECONDS)\n  .build()\nWorkManager.getInstance(ctx).enqueue(req)'},
+    {t:'key',x:['Garante execução mesmo após fechar o app ou reiniciar o device; escolhe o mecanismo por baixo conforme a versão do Android.','<b>Constraints</b>: só com rede, só carregando, só com bateria/armazenamento ok.','<b>Chaining</b> (encadear), <b>periodic</b> (mínimo 15 min), <b>unique work</b> (não duplicar), <b>backoff</b> em falha.']},
+    {t:'h',x:'CoroutineWorker & o Result'},
+    {t:'key',x:['<code>Result.success()</code> — concluiu. <code>Result.failure()</code> — desistiu (erro permanente).','<code>Result.retry()</code> — falha transitória; o WorkManager reagenda com o backoff.','<code>CoroutineWorker</code> roda <code>doWork</code> como suspend; para trabalho longo com progresso, use <code>setForeground</code> (vira foreground enquanto roda).']},
+    {t:'h',x:'Foreground Service'},
+    {t:'p',x:'Para trabalho <b>contínuo, imediato e visível</b> (player de música, rastreio de corrida), use um <b>foreground service</b> com <b>notificação persistente</b>. No Android 14+ é obrigatório declarar o <code>foregroundServiceType</code> (location, mediaPlayback, dataSync…) e justificar o uso — a Play fiscaliza.'},
+    {t:'call',title:'WorkManager não é para horário exato',x:'WorkManager pode agrupar/adiar por bateria — não promete instante preciso. Para disparo pontual (alarme, lembrete), use <b>AlarmManager</b> com <code>setExactAndAllowWhileIdle</code>; no Android 12+ isso exige a permissão <code>SCHEDULE_EXACT_ALARM</code>. Para contínuo imediato, foreground service.'},
+    {t:'real',x:'Upload de comprovante que <b>não pode se perder</b> mesmo fechando o app: WorkManager com constraint de rede + backoff exponencial. Rastreio de entrega em tempo real com ícone na barra: foreground service (type location). Sync "quando der, com Wi-Fi": WorkManager periódico com constraint.'}
   ],
   quiz:[
     {type:'case',q:'Um upload de comprovante precisa acontecer <b>mesmo que o usuário feche o app ou reinicie o celular</b>, assim que houver rede. Qual ferramenta?',
@@ -1268,20 +1280,26 @@ const MODULES = [
   xp:55,
   lesson:[
     {t:'h',x:'Frame budget: de onde vem o jank'},
-    {t:'p',x:'A 60fps você tem <b>~16,6ms por frame</b> (a 120fps, ~8,3ms). Passou disso, o frame é perdido (<b>jank</b>). Trabalho pesado na Main thread — I/O, parse, layout caro, alocação — é a causa principal. Meça com Profiler/Perfetto/Macrobenchmark, não no olho.'},
+    {t:'p',x:'A 60fps você tem <b>~16,6ms por frame</b> (a 120fps, ~8,3ms). Estourou o orçamento, o frame é perdido (<b>jank</b>). A causa quase sempre é trabalho pesado na <b>Main thread</b>: I/O, parse de JSON, layout caro, <b>overdraw</b> (pintar o mesmo pixel várias vezes) e <b>alocação</b> que dispara GC. Meça, não chute.'},
+    {t:'h',x:'Startup: cold, warm, hot'},
+    {t:'p',x:'<b>Cold start</b> (processo criado do zero) é o pior caso e o que a Play mede. Reduza-o: adie inicialização pesada (use a <b>App Startup</b> lib para ordenar/lazy), evite trabalho no <code>Application.onCreate</code>, e use a <b>Splash Screen API</b> em vez de uma Activity de splash falsa.'},
     {t:'h',x:'Memory leaks clássicos'},
-    {t:'key',x:['Guardar <code>Context</code>/<code>Activity</code> em um <b>static</b> ou singleton de vida longa: a Activity destruída não é coletada.','Listeners/callbacks registrados e <b>não removidos</b>.','Inner class não-estática segurando referência implícita ao outer (Activity/Fragment).','Detecte com <b>LeakCanary</b>.']},
+    {t:'key',x:['<code>Context</code>/<code>Activity</code> guardado em <b>static</b> ou singleton de vida longa — a Activity destruída não é coletada.','Listeners/callbacks registrados e <b>não removidos</b> (unregister no onDestroy).','Inner class não-estática segurando o outer (Activity/Fragment) implicitamente.','Detecte com <b>LeakCanary</b>; force checagens de disco/rede na Main com <b>StrictMode</b>.']},
+    {t:'h',x:'Memória & GC'},
+    {t:'key',x:['<b>Bitmaps</b> são os maiores vilões de memória — carregue no tamanho certo (Coil/Glide fazem isso).','Alocação em <b>hot paths</b> (scroll, recomposição) dispara GC e causa jank — reuse objetos.','<b>OutOfMemory</b> costuma ser leak acumulado, não "app grande": investigue com o Memory Profiler (heap dump).']},
     {t:'h',x:'R8: shrink, obfuscate, optimize'},
-    {t:'code',x:'<span class="cm"># proguard-rules.pro — manter o que é usado por reflexão/serialização</span>\n-keep class com.superapp.model.** { *; }\n-keepclassmembers class ** {\n  <span class="kw">@com.google.gson.annotations.SerializedName</span> &lt;fields&gt;;\n}\n<span class="cm"># sem keep rules, a classe quebra só no release ofuscado</span>'},
+    {t:'code',x:'<span class="cm"># proguard-rules.pro — manter o usado por reflexão/serialização</span>\n-keep class com.superapp.model.** { *; }\n-keepclassmembers class ** {\n  <span class="kw">@com.google.gson.annotations.SerializedName</span> &lt;fields&gt;;\n}\n<span class="cm"># sem keep rules, a classe quebra SÓ no release ofuscado</span>'},
     {t:'cmp',head:['','ProGuard','R8'],rows:[
-      ['Papel','Shrink/obfuscate (legado)','<b>Shrink + obfuscate + optimize</b>, tudo integrado ao build atual'],
+      ['Papel','Shrink/obfuscate (legado)','<b>Shrink + obfuscate + optimize</b> integrados'],
       ['Padrão hoje','Substituído','Compilador padrão do Android'],
-      ['Keep rules','Sim','Sim (necessárias para reflexão/serialização)']
+      ['Keep rules','Sim','Sim (para reflexão/serialização)']
     ]},
-    {t:'call',title:'Keep rules e reflexão',x:'R8 remove/renomeia código não referenciado estaticamente. Classes acessadas por <b>reflexão</b> (serialização, DI antigo) precisam de <b>keep rules</b>, senão quebram só no release ofuscado — um bug que não aparece no debug.'},
+    {t:'call',title:'Keep rules e reflexão',x:'R8 remove/renomeia código não referenciado estaticamente. Classes acessadas por <b>reflexão</b> (serialização, DI antigo) precisam de <b>keep rules</b>, senão quebram só no release ofuscado — bug que o debug não pega. E suba o <b>mapping file</b> para desofuscar crashes.'},
     {t:'h',x:'Baseline Profiles'},
-    {t:'p',x:'Um <b>baseline profile</b> lista os caminhos de código quentes (startup, primeira rolagem) para o Android <b>compilar AOT</b> antecipadamente, evitando o custo do JIT no primeiro uso. Resultado: <b>startup e scroll mais rápidos</b> desde a primeira execução. Meça o ganho com Macrobenchmark.'},
-    {t:'real',x:'App abre devagar e a primeira rolagem trava? Gere um baseline profile das jornadas críticas do SuperApp (splash → home → lista). E rode o LeakCanary: um <code>Context</code> de Activity preso num singleton de rede é campeão de leak no mundo real.'}
+    {t:'p',x:'Um <b>baseline profile</b> lista os caminhos de código quentes (startup, primeira rolagem) para o Android <b>compilar AOT</b> antes, evitando o custo do JIT no primeiro uso. Resultado: <b>startup e scroll mais rápidos</b> desde a primeira execução — ganho tipicamente relevante. Gere e meça com <b>Macrobenchmark</b>.'},
+    {t:'h',x:'Ferramentas de medição'},
+    {t:'key',x:['<b>Macrobenchmark</b> — mede startup e scroll de forma reproduzível (a fonte de verdade).','<b>Perfetto / System Trace</b> — timeline detalhada de threads e frames.','<b>Profiler</b> (CPU/Memory) e <b>Layout Inspector</b> (contagem de recomposição no Compose).']},
+    {t:'real',x:'App abre devagar e a primeira rolagem trava? Baseline profile das jornadas críticas (splash → home → lista) + medir no Macrobenchmark. E LeakCanary: um <code>Context</code> de Activity preso num singleton de rede é campeão de leak no mundo real.'}
   ],
   quiz:[
     {type:'trap',q:'Qual destes é um <b>memory leak</b> clássico no Android?',
@@ -1312,24 +1330,31 @@ const MODULES = [
   lesson:[
     {t:'h',x:'Build types × product flavors'},
     {t:'cmp',head:['','Build type','Product flavor'],rows:[
-      ['O que varia','Como compila (debug/release: minify, sign, debuggable)','Variante de produto (free/paid, dev/prod, marca)'],
+      ['O que varia','Como compila (debug/release: minify, sign)','Variante de produto (free/paid, dev/prod)'],
       ['Exemplos','debug, release','dev, staging, prod'],
-      ['Combinam','—','type × flavor = variant (ex.: prodRelease)']
+      ['Combinam','—','type × flavor = <b>variant</b> (ex.: prodRelease)']
     ]},
+    {t:'p',x:'Cada variant pode ter <code>buildConfigField</code>, <code>resValue</code>, endpoint e chave próprios. O <b>signingConfig</b> do release usa a chave de assinatura (ou o Play App Signing gerencia).'},
     {t:'h',x:'implementation vs api'},
-    {t:'code',x:'<span class="cm">// build.gradle.kts do módulo</span>\ndependencies {\n  implementation(libs.retrofit)  <span class="cm">// encapsula: consumidores não veem</span>\n  api(libs.model)                <span class="cm">// vaza no contrato público (use com parcimônia)</span>\n}\n\n<span class="cm"># libs.versions.toml — fonte única de versões</span>\n[libraries]\nretrofit = { module = <span class="cm">"com.squareup.retrofit2:retrofit"</span>, version.ref = <span class="cm">"retrofit"</span> }'},
-    {t:'p',x:'No Gradle, ao declarar uma dependência num módulo:'},
-    {t:'key',x:['<code>implementation</code> — a dependência é <b>interna</b>; consumidores do seu módulo <b>não</b> a enxergam. Muda a lib → só seu módulo recompila.','<code>api</code> — a dependência <b>vaza</b> na API pública; consumidores a herdam transitivamente. Muda a lib → <b>recompila todos</b> os consumidores.','Regra: use <code>implementation</code> por padrão; <code>api</code> só quando o tipo aparece na sua interface pública.']},
+    {t:'code',x:'<span class="cm">// build.gradle.kts do módulo</span>\ndependencies {\n  implementation(libs.retrofit)  <span class="cm">// encapsula: consumidores não veem</span>\n  api(libs.model)                <span class="cm">// vaza no contrato público (use com parcimônia)</span>\n}'},
+    {t:'key',x:['<code>implementation</code> — dependência <b>interna</b>; consumidores não a enxergam. Muda a lib → só seu módulo recompila.','<code>api</code> — <b>vaza</b> na API pública; consumidores a herdam. Muda a lib → <b>recompila todos</b> os consumidores.','Regra: <code>implementation</code> por padrão; <code>api</code> só quando o tipo aparece na sua interface pública.']},
     {t:'call',title:'api mata o build incremental',x:'Usar <code>api</code> à toa faz uma mudança num módulo base recompilar meio projeto (vazamento transitivo). <code>implementation</code> encapsula e preserva a compilação incremental — build mais rápido e acoplamento menor.'},
     {t:'h',x:'KSP vs KAPT'},
     {t:'cmp',head:['','KAPT','KSP'],rows:[
-      ['Como','Gera stubs Java para processar anotações','Processa símbolos Kotlin diretamente'],
+      ['Como','Gera stubs Java p/ processar anotações','Processa símbolos Kotlin diretamente'],
       ['Velocidade','Lento','<b>Bem mais rápido</b>'],
       ['Status','Legado','Recomendado (Room, Moshi, Hilt já suportam)']
     ]},
-    {t:'h',x:'Modularização'},
-    {t:'key',x:['Divida em <code>app</code>, <code>feature:*</code>, <code>core:*</code> (design system, network, data).','Ganhos: <b>build paralelo e incremental</b>, encapsulamento, ownership por time, e habilita build features.','<b>Version catalog</b> (<code>libs.versions.toml</code>) e <b>convention plugins</b> centralizam config entre módulos.']},
-    {t:'real',x:'Cada time do SuperApp dono de um <code>feature:*</code>; <code>core:designsystem</code> e <code>core:network</code> compartilhados. Dependências entre módulos por <code>implementation</code> e contratos claros — assim uma mudança num feature não recompila os outros nem vaza detalhes.'}
+    {t:'h',x:'Version catalog & convention plugins'},
+    {t:'code',x:'<span class="cm"># libs.versions.toml — fonte única de versões</span>\n[versions]\nretrofit = <span class="cm">"2.11.0"</span>\n[libraries]\nretrofit = { module = <span class="cm">"com.squareup.retrofit2:retrofit"</span>, version.ref = <span class="cm">"retrofit"</span> }'},
+    {t:'key',x:['<b>Version catalog</b> centraliza versões — sem números mágicos divergentes entre módulos.','<b>Convention plugins</b> (buildSrc / build-logic) tiram a config repetida de cada <code>build.gradle</code> — um único lugar define "o que é um módulo Android da casa".']},
+    {t:'h',x:'Modularização: por quê'},
+    {t:'key',x:['<b>Build paralelo e incremental</b>: módulos independentes compilam juntos; só o que mudou recompila.','<b>Encapsulamento</b> e <b>ownership</b> por time; fronteiras claras de API.','Habilita <b>dynamic feature modules</b> (entrega sob demanda).']},
+    {t:'h',x:'Estrutura de módulos'},
+    {t:'p',x:'Um padrão comum (estilo Now in Android): <code>:app</code> (monta tudo), <code>:feature:*</code> (telas/fluxos), <code>:core:*</code> (<code>designsystem</code>, <code>network</code>, <code>data</code>, <code>common</code>). Regra: <b>feature não depende de feature</b>; o compartilhado desce para <code>:core</code>. Evite dependências cíclicas.'},
+    {t:'h',x:'Build mais rápido'},
+    {t:'key',x:['Ligue <b>configuration cache</b> e <b>build cache</b> do Gradle.','Prefira <code>implementation</code> a <code>api</code> (menos recompilação transitiva).','KSP no lugar de KAPT; evite trabalho pesado na fase de configuração.']},
+    {t:'real',x:'No SuperApp, cada time é dono de um <code>:feature</code>; <code>:core:designsystem</code> e <code>:core:network</code> são compartilhados, ligados por <code>implementation</code> com contratos claros — mudança num feature não recompila os outros nem vaza detalhes internos.'}
   ],
   quiz:[
     {type:'cmp',q:'Diferença entre <code>implementation</code> e <code>api</code> no Gradle?',
@@ -1359,14 +1384,20 @@ const MODULES = [
   xp:55,
   lesson:[
     {t:'h',x:'Onde guardar chaves e segredos'},
+    {t:'key',x:['<b>Android Keystore</b> — chaves criptográficas em hardware/TEE, <b>não exportáveis</b>: o app usa a chave sem nunca vê-la em texto claro.','<b>EncryptedSharedPreferences</b> / Jetpack Security — persiste dados sensíveis criptografados (chave mestra no Keystore).','<b>NUNCA</b> hardcode segredos (API key, secret) no código/recursos: o APK é <b>descompilável</b> e a string é extraída em segundos.']},
     {t:'code',x:'<span class="cm">// token criptografado em repouso; a chave mestra vive no Keystore</span>\n<span class="kw">val</span> prefs = EncryptedSharedPreferences.create(\n  ctx, <span class="cm">"secure"</span>,\n  MasterKey.Builder(ctx).setKeyScheme(AES256_GCM).build(),\n  PrefKeyEncryptionScheme.AES256_SIV,\n  PrefValueEncryptionScheme.AES256_GCM\n)\nprefs.edit().putString(<span class="cm">"token"</span>, token).apply()'},
-    {t:'key',x:['<b>Android Keystore</b> — chaves criptográficas em hardware/TEE, <b>não exportáveis</b>: o app usa a chave sem nunca vê-la em texto claro.','<b>EncryptedSharedPreferences</b> / Jetpack Security — persiste dados sensíveis criptografados (chave no Keystore).','<b>NUNCA</b> hardcode segredos (API key, secret) no código/recursos: o APK é <b>descompilável</b> e a string é extraída.']},
-    {t:'call',title:'Ofuscação ≠ criptografia',x:'R8/ProGuard <b>ofuscam</b> (renomeiam) — dificultam a leitura, mas <b>não</b> protegem segredos: um atacante ainda extrai strings do APK. Segurança de dados exige criptografia (Keystore), não ofuscação.'},
-    {t:'h',x:'Rede segura'},
-    {t:'key',x:['Sempre <b>HTTPS/TLS</b>; bloqueie cleartext via <b>Network Security Config</b>.','<b>Certificate pinning</b> — fixa o certificado/CA esperado, mitigando ataques MITM com CA fraudulenta.','Cuidado: pinning mal gerenciado quebra o app quando o cert rotaciona — tenha plano de atualização.']},
-    {t:'h',x:'Biometria & armazenamento'},
-    {t:'key',x:['<b>BiometricPrompt</b> — API padrão para desbloqueio biométrico; combine com uma chave do Keystore liberada só após autenticação.','<b>Scoped storage</b> — acesso restrito a arquivos; use o Storage Access Framework para arquivos do usuário.']},
-    {t:'real',x:'Token de sessão do SuperApp: guardado com EncryptedSharedPreferences (chave no Keystore), nunca em SharedPreferences plano. Comunicação com o backend em TLS com pinning das CAs. E zero segredos hardcoded — eles vão para o backend, não para o APK.'}
+    {t:'call',title:'Ofuscação ≠ criptografia',x:'R8/ProGuard <b>ofuscam</b> (renomeiam) — dificultam a leitura, mas <b>não</b> protegem segredos: o atacante ainda extrai strings do APK. Segurança de dados exige <b>criptografia</b> (Keystore), não ofuscação. E o segredo de verdade (chave de API do backend) fica no <b>servidor</b>, nunca no cliente.'},
+    {t:'h',x:'Rede segura & certificate pinning'},
+    {t:'p',x:'Todo tráfego em <b>HTTPS/TLS</b>. Bloqueie cleartext e configure pinning via <b>Network Security Config</b>. O <b>certificate pinning</b> fixa qual CA/certificado o app aceita — uma CA fraudulenta (MITM) não passa.'},
+    {t:'code',x:'<span class="cm">&lt;!-- network_security_config.xml --&gt;</span>\n&lt;domain-config cleartextTrafficPermitted=<span class="cm">"false"</span>&gt;\n  &lt;domain&gt;api.superapp.com&lt;/domain&gt;\n  &lt;pin-set&gt;&lt;pin digest=<span class="cm">"SHA-256"</span>&gt;...&lt;/pin&gt;&lt;/pin-set&gt;\n&lt;/domain-config&gt;'},
+    {t:'call',title:'Cuidado com pinning',x:'Pinning mal gerenciado <b>quebra o app</b> quando o certificado rotaciona. Fixe a <b>CA intermediária</b> (não a folha), pino de backup e um plano de atualização — senão você derruba a base num vencimento de cert.'},
+    {t:'h',x:'Biometria'},
+    {t:'p',x:'O <b>BiometricPrompt</b> é a API padrão. O padrão <b>forte</b> não confia no "sim/não" da UI: vincula uma chave do <b>Keystore</b> a um <code>CryptoObject</code> liberado só após a autenticação — assim a operação sensível só acontece com biometria de verdade, sem como falsear.'},
+    {t:'h',x:'Armazenamento & componentes expostos'},
+    {t:'key',x:['<b>Scoped storage</b>: acesso restrito; use o <b>Storage Access Framework</b> para arquivos do usuário.','Marque componentes <code>android:exported="false"</code> se não devem ser chamados por outros apps; valide toda Intent recebida.','Permissões em <b>runtime</b>: peça o mínimo, no momento do uso, e trate a negação.']},
+    {t:'h',x:'O que NÃO confiar no cliente'},
+    {t:'p',x:'Regra de ouro: o dispositivo é <b>hostil</b>. Pode estar com root, o APK pode ser modificado, o tráfego inspecionado. Autorização e regras de negócio críticas ficam no <b>servidor</b>; o cliente valida por UX, o backend valida por segurança. Root/tamper detection ajuda, mas não é barreira absoluta.'},
+    {t:'real',x:'Token de sessão do SuperApp: EncryptedSharedPreferences (chave no Keystore), nunca em prefs plano. Backend em TLS com pinning da CA. Pagamento e limites validados no servidor. Zero segredo hardcoded — eles vivem no backend.'}
   ],
   quiz:[
     {type:'trap',q:'Onde uma chave de criptografia deve ser guardada num app Android?',
@@ -1396,23 +1427,29 @@ const MODULES = [
   xp:50,
   lesson:[
     {t:'h',x:'AAB, não APK'},
-    {t:'code',x:'<span class="cm">// build.gradle.kts — release enxuto</span>\nandroid {\n  buildTypes {\n    release {\n      isMinifyEnabled = <span class="kw">true</span>      <span class="cm">// R8: shrink + ofusca</span>\n      isShrinkResources = <span class="kw">true</span>\n    }\n  }\n}\n<span class="cm"># publicar: ./gradlew bundleRelease  -&gt;  app-release.aab</span>'},
-    {t:'p',x:'O formato de publicação atual é o <b>Android App Bundle (.aab)</b>. Você sobe o bundle e a <b>Play gera APKs otimizados por device</b> (split APKs por densidade/ABI/idioma), então o usuário baixa <b>menos</b>. O APK único ainda serve para sideload/distribuição direta.'},
+    {t:'p',x:'O formato de publicação atual é o <b>Android App Bundle (.aab)</b>. Você sobe o bundle e a <b>Play gera APKs otimizados por device</b> (split APKs por densidade/ABI/idioma) — o usuário baixa <b>menos</b>. O APK único ainda serve para sideload/distribuição direta.'},
     {t:'cmp',head:['','APK','AAB (App Bundle)'],rows:[
       ['O que é','Pacote instalável final','Formato de publicação; a Play gera os APKs'],
       ['Download do usuário','Tudo, para todo device','Otimizado por device (menor)'],
       ['Uso','Sideload, distribuição direta','Publicação na Play (padrão atual)']
     ]},
-    {t:'h',x:'Play App Signing & tracks'},
-    {t:'key',x:['<b>Play App Signing</b> — a Google guarda a chave de assinatura do app com segurança e assina os artefatos gerados.','<b>Tracks</b>: internal → closed → open → production, para testar com públicos crescentes.','<b>Staged rollout</b>: libera para uma <b>porcentagem</b> dos usuários e monitora crash/ANR; pode <b>pausar (halt)</b> se algo der errado.']},
-    {t:'h',x:'Não fique cego para crashes'},
-    {t:'call',title:'Mapping file do R8',x:'Como o R8 ofusca nomes, as stack traces de crash vêm embaralhadas. Faça <b>upload do mapping file</b> (para Play Console/Crashlytics) para <b>desofuscar</b> e ver o stack real. Sem o mapping, o crash de produção é ilegível.'},
+    {t:'code',x:'<span class="cm">// build.gradle.kts — release enxuto</span>\nrelease {\n  isMinifyEnabled = <span class="kw">true</span>      <span class="cm">// R8: shrink + ofusca</span>\n  isShrinkResources = <span class="kw">true</span>\n}\n<span class="cm"># publicar: ./gradlew bundleRelease  -&gt;  app-release.aab</span>'},
+    {t:'h',x:'Play App Signing'},
+    {t:'p',x:'Com <b>Play App Signing</b>, a Google guarda a <b>chave de assinatura</b> do app com segurança e assina os APKs gerados a partir do seu bundle. Você mantém só a <b>upload key</b> (recuperável se perder). Sem isso, perder a chave = não poder mais atualizar o app.'},
+    {t:'h',x:'Tracks & teste antes de produção'},
+    {t:'key',x:['<b>Tracks</b>: internal → closed → open → production, para testar com públicos crescentes.','<b>Pre-launch report</b>: a Play roda o app em vários devices e reporta crashes/acessibilidade antes de você publicar.','Novas contas de teste passam por período mínimo de teste fechado antes de liberar produção.']},
+    {t:'h',x:'Staged rollout & halt'},
+    {t:'p',x:'Publique em <b>staged rollout</b>: libera para uma <b>porcentagem</b> (5% → 20% → 50% → 100%), monitorando crash/ANR a cada degrau. Se piorar, você <b>pausa (halt)</b> ou faz rollback do rollout — limitando o raio de impacto de uma regressão.'},
+    {t:'h',x:'Não fique cego: mapping & vitals'},
+    {t:'call',title:'Mapping file do R8',x:'O R8 ofusca nomes, então as stack traces vêm embaralhadas. Faça <b>upload do mapping file</b> (Play Console/Crashlytics) para <b>desofuscar</b>. Acompanhe o <b>Android Vitals</b> (crash-free rate, ANR rate): passar dos limiares degrada sua visibilidade na loja.'},
     {t:'h',x:'In-app updates'},
     {t:'cmp',head:['','Flexible','Immediate'],rows:[
       ['Experiência','Baixa em background; usuário continua usando','Bloqueia com tela de atualização'],
-      ['Quando','Atualização opcional','Atualização crítica/obrigatória']
+      ['Quando','Melhoria opcional','Atualização crítica/obrigatória']
     ]},
-    {t:'real',x:'Redesign entra por <b>staged rollout</b> (5% → monitorar crashes/ANR → 20% → 100%), com o <b>mapping</b> subido para ler qualquer crash ofuscado. Uma correção de segurança urgente usa <b>in-app update immediate</b>; uma melhoria, <b>flexible</b>.'}
+    {t:'h',x:'Versionamento & CI/CD'},
+    {t:'key',x:['<code>versionCode</code> (inteiro sempre crescente, usado pela Play) vs <code>versionName</code> (string para humanos).','Automatize o release com <b>Fastlane</b> ou <b>Gradle Play Publisher</b> a partir do CI (GitLab/Jenkins).','A Play exige atualizar o <b>targetSdk</b> periodicamente — app desatualizado deixa de aparecer para novos usuários.']},
+    {t:'real',x:'O redesign entra por <b>staged rollout</b> (5% → monitorar crashes/ANR → subir), com o <b>mapping</b> subido para ler qualquer crash ofuscado. Correção de segurança urgente → <b>in-app update immediate</b>; melhoria → <b>flexible</b>. Tudo disparado pelo pipeline, não na mão.'}
   ],
   quiz:[
     {type:'cmp',q:'Diferença entre publicar um <b>APK</b> e um <b>AAB (App Bundle)</b>?',
