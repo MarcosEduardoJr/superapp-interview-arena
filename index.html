@@ -734,35 +734,52 @@ const MODULES = [
   xp:60,
   lesson:[
     {t:'h',x:'Null safety — NPE em tempo de compilação'},
-    {t:'p',x:'Kotlin separa <code>T</code> (non-null) de <code>T?</code> (nullable). Operadores: <code>?.</code> (safe call), <code>?:</code> (Elvis, valor padrão), <code>!!</code> (força e <b>lança NPE</b> — evite), <code>let</code> para bloco só-se-não-nulo.'},
-    {t:'code',x:'<span class="kw">val</span> nome: String? = user?.profile?.name   <span class="cm">// safe call encadeado</span>\n<span class="kw">val</span> exibir = nome ?: <span class="cm">"Anônimo"</span>          <span class="cm">// Elvis: default</span>\nnome?.let { log(it) }                     <span class="cm">// roda só se != null</span>\n<span class="kw">val</span> perigo = nome!!                       <span class="cm">// NPE se nulo — cheiro de código</span>'},
-    {t:'h',x:'data class, sealed e enum'},
-    {t:'key',x:['<b>data class</b> — gera <code>equals</code>/<code>hashCode</code>/<code>toString</code>/<code>copy</code>/<code>componentN</code>. Ideal para modelos e estados imutáveis.','<b>sealed class/interface</b> — hierarquia <b>fechada</b>: o compilador sabe todos os subtipos, então o <code>when</code> é <b>exaustivo</b> (sem <code>else</code>). Cada subtipo pode carregar <b>dados diferentes</b>.','<b>enum</b> — conjunto fixo de <b>constantes</b>; todos compartilham a mesma forma. Sem dados variáveis por caso.']},
-    {t:'call',title:'sealed vs enum',x:'Use <b>enum</b> para um conjunto de valores homogêneos (dias da semana). Use <b>sealed</b> quando cada caso carrega dados próprios — perfeito para estado de tela: <code>Loading</code>, <code>Success(data)</code>, <code>Error(msg)</code>.'},
-    {t:'h',x:'Scope functions'},
-    {t:'cmp',head:['Função','Referência','Retorna'],rows:[
-      ['<code>let</code>','<code>it</code>','o resultado do bloco'],
-      ['<code>run</code>','<code>this</code>','o resultado do bloco'],
-      ['<code>apply</code>','<code>this</code>','o próprio objeto (config)'],
-      ['<code>also</code>','<code>it</code>','o próprio objeto (side-effect)'],
-      ['<code>with</code>','<code>this</code>','o resultado do bloco']
+    {t:'p',x:'Kotlin move a segurança de nulo para o <b>compilador</b>: separa <code>T</code> (non-null) de <code>T?</code> (nullable). Você não consegue chamar um método num <code>T?</code> sem tratar o nulo — o "bilhão de dólares" do NPE vira erro de compilação.'},
+    {t:'key',x:['<code>?.</code> (safe call) — chama só se não for nulo, senão devolve nulo.','<code>?:</code> (Elvis) — valor padrão quando o lado esquerdo é nulo.','<code>as?</code> — cast seguro: devolve nulo em vez de estourar.','<code>?.let { }</code> — bloco que roda só-se-não-nulo.','<code>!!</code> — força e <b>lança NPE</b>; use só quando você <em>prova</em> que nunca é nulo.']},
+    {t:'code',x:'<span class="kw">val</span> nome: String? = user?.profile?.name   <span class="cm">// safe call encadeado</span>\n<span class="kw">val</span> exibir = nome ?: <span class="cm">"Anônimo"</span>            <span class="cm">// Elvis: valor padrão</span>\n<span class="kw">val</span> u = obj <span class="kw">as?</span> Usuario                    <span class="cm">// cast seguro: null se não for</span>\nnome?.let { log(it) }                       <span class="cm">// roda só se != null</span>\n<span class="kw">val</span> perigo = nome!!                         <span class="cm">// NPE se nulo — cheiro de código</span>'},
+    {t:'call',title:'Cuidado com o Java (platform types)',x:'Valor vindo de código Java sem anotação chega como <b>platform type</b> <code>T!</code> — o compilador não sabe se é nulo e <b>não</b> te protege. Ao consumir libs Java, declare o tipo explicitamente como <code>T?</code> e trate; senão o NPE volta pela porta dos fundos. <code>lateinit</code> é outra fonte: acessar antes de inicializar lança <code>UninitializedPropertyAccessException</code>.'},
+    {t:'h',x:'val, var e imutabilidade de verdade'},
+    {t:'p',x:'<code>val</code> é referência <b>read-only</b>, não imutabilidade profunda: um <code>val</code> pode apontar para uma lista mutável. Prefira <code>val</code> por padrão e use <b>coleções read-only</b> para de fato travar o estado.'},
+    {t:'cmp',head:['','Read-only','Mutável'],rows:[
+      ['Referência','<code>val</code>','<code>var</code>'],
+      ['Lista','<code>List&lt;T&gt;</code>','<code>MutableList&lt;T&gt;</code>'],
+      ['Mapa','<code>Map&lt;K,V&gt;</code>','<code>MutableMap&lt;K,V&gt;</code>']
     ]},
+    {t:'h',x:'data class, sealed e enum'},
+    {t:'key',x:['<b>data class</b> — gera <code>equals</code>/<code>hashCode</code>/<code>toString</code>/<code>copy</code>/<code>componentN</code>. Ideal para modelos e estados imutáveis (<code>copy</code> cria a nova versão).','<b>sealed class/interface</b> — hierarquia <b>fechada</b>: o compilador conhece todos os subtipos, então o <code>when</code> é <b>exaustivo</b> (sem <code>else</code>). Cada subtipo carrega <b>dados próprios</b>.','<b>enum</b> — conjunto fixo de <b>constantes</b> homogêneas; sem dados variáveis por caso.']},
+    {t:'code',x:'<span class="kw">sealed interface</span> UiState {\n  <span class="kw">data object</span> Loading : UiState\n  <span class="kw">data class</span> Ok(<span class="kw">val</span> itens: List&lt;Fatura&gt;) : UiState\n  <span class="kw">data class</span> Error(<span class="kw">val</span> msg: String?) : UiState\n}\n<span class="kw">when</span> (state) {                 <span class="cm">// exaustivo — o compilador exige todos os casos</span>\n  Loading  -&gt; mostrarSpinner()\n  <span class="kw">is</span> Ok    -&gt; render(state.itens)\n  <span class="kw">is</span> Error -&gt; mostrarErro(state.msg)\n}'},
+    {t:'call',title:'sealed vs enum (pega em prova)',x:'Use <b>enum</b> para valores homogêneos (dias da semana). Use <b>sealed</b> quando cada caso carrega dados diferentes — perfeito para estado de tela (<code>Loading</code>, <code>Ok(data)</code>, <code>Error(msg)</code>). Ambos são fechados; por isso o <code>when</code> é exaustivo e você não esquece um caso.'},
+    {t:'h',x:'Scope functions: let, run, apply, also, with'},
+    {t:'cmp',head:['Função','Referência','Retorna','Uso típico'],rows:[
+      ['<code>let</code>','<code>it</code>','o resultado do bloco','Transformar / tratar nulo'],
+      ['<code>run</code>','<code>this</code>','o resultado do bloco','Calcular com o objeto no escopo'],
+      ['<code>apply</code>','<code>this</code>','o próprio objeto','Configurar (builder-like)'],
+      ['<code>also</code>','<code>it</code>','o próprio objeto','Side-effect (log, validação)'],
+      ['<code>with</code>','<code>this</code>','o resultado do bloco','Agrupar chamadas num objeto']
+    ]},
+    {t:'code',x:'<span class="kw">val</span> intent = Intent(ctx, Tela::class.java).<span class="kw">apply</span> {  <span class="cm">// this, retorna o objeto</span>\n  putExtra(<span class="cm">"id"</span>, id)\n}\nuser?.<span class="kw">let</span> { salvar(it) }              <span class="cm">// it, só-se-não-nulo</span>\nrepo.buscar(id).<span class="kw">also</span> { log(it) }     <span class="cm">// it, side-effect, devolve o valor</span>'},
+    {t:'h',x:'Extension e higher-order functions'},
+    {t:'p',x:'<b>Extension functions</b> adicionam comportamento a um tipo sem herdar dele — base das APIs fluentes do Kotlin e do Compose. <b>Higher-order functions</b> recebem/retornam funções (lambdas); com <code>inline</code>, a lambda é inlinada e não aloca objeto por chamada.'},
+    {t:'code',x:'<span class="cm">// extension: some sem herdar</span>\n<span class="kw">fun</span> View.gone() { visibility = View.GONE }\n\n<span class="cm">// higher-order + trailing lambda</span>\n<span class="kw">inline fun</span> &lt;T&gt; Iterable&lt;T&gt;.somaSe(pred: (T) -&gt; Boolean): Int =\n  count(pred)'},
     {t:'h',x:'Coroutines & structured concurrency'},
-    {t:'code',x:'<span class="kw">class</span> FaturasVM(<span class="kw">val</span> repo: Repo) : ViewModel() {\n  <span class="kw">private val</span> _state = MutableStateFlow&lt;UiState&gt;(Loading)\n  <span class="kw">val</span> state = _state.asStateFlow()\n\n  <span class="kw">fun</span> carregar() = viewModelScope.launch {  <span class="cm">// escopo cancela ao limpar o VM</span>\n    _state.value = <span class="kw">try</span> { Ok(withContext(Dispatchers.IO) { repo.faturas() }) }\n                   <span class="kw">catch</span> (e: Exception) { Error(e.message) }\n  }\n}'},
-    {t:'p',x:'<b>suspend functions</b> pausam sem bloquear a thread. <b>Structured concurrency</b>: corrotinas vivem dentro de um <code>CoroutineScope</code>; cancelar o escopo cancela os filhos — <b>sem leaks</b>. <code>launch</code> dispara fire-and-forget; <code>async</code>/<code>await</code> retorna resultado.'},
+    {t:'p',x:'<b>suspend functions</b> pausam sem bloquear a thread. <b>Structured concurrency</b>: corrotinas vivem num <code>CoroutineScope</code>; cancelar o escopo cancela os filhos — <b>sem leaks</b>. <code>launch</code> dispara fire-and-forget; <code>async</code>/<code>await</code> devolve resultado. Cancelamento é <b>cooperativo</b>: código bloqueante ignora o cancelamento; use funções suspensas ou cheque <code>isActive</code>.'},
+    {t:'code',x:'<span class="kw">class</span> FaturasVM(<span class="kw">val</span> repo: Repo) : ViewModel() {\n  <span class="kw">private val</span> _state = MutableStateFlow&lt;UiState&gt;(Loading)\n  <span class="kw">val</span> state = _state.asStateFlow()\n\n  <span class="kw">fun</span> carregar() = viewModelScope.launch {  <span class="cm">// cancela ao limpar o VM</span>\n    _state.value = <span class="kw">try</span> { Ok(withContext(Dispatchers.IO) { repo.faturas() }) }\n                   <span class="kw">catch</span> (e: Exception) { Error(e.message) }\n  }\n}'},
     {t:'cmp',head:['Dispatcher','Para quê'],rows:[
       ['<code>Main</code>','UI'],
-      ['<code>IO</code>','Rede, disco, banco (muitas threads, I/O-bound)'],
+      ['<code>IO</code>','Rede, disco, banco (I/O-bound, muitas threads)'],
       ['<code>Default</code>','CPU-bound (parse, sort, cálculo pesado)']
     ]},
     {t:'h',x:'Flow: o duelo StateFlow × SharedFlow × LiveData'},
-    {t:'cmp',head:['','Tipo','Guarda valor atual?','Lifecycle-aware?','Uso típico'],rows:[
+    {t:'cmp',head:['','Tipo','Guarda valor?','Lifecycle-aware?','Uso típico'],rows:[
       ['<b>StateFlow</b>','Hot','Sim (sempre tem valor)','Não nativo — use <code>repeatOnLifecycle</code>','Estado de tela'],
-      ['<b>SharedFlow</b>','Hot','Não (config. replay)','Não nativo','Eventos one-shot (navegar, toast)'],
-      ['<b>LiveData</b>','Hot','Sim','Sim, nativo','Legado / Android View clássico'],
+      ['<b>SharedFlow</b>','Hot','Não (replay configurável)','Não nativo','Eventos one-shot (navegar, toast)'],
+      ['<b>LiveData</b>','Hot','Sim','Sim, nativo','Legado / Views clássicas'],
       ['<b>Flow</b> (frio)','Cold','—','—','Stream sob demanda; re-executa por coletor']
     ]},
-    {t:'real',x:'Padrão moderno no SuperApp: ViewModel expõe <code>StateFlow</code> de estado + <code>SharedFlow</code> de eventos; a UI coleta com <code>repeatOnLifecycle(STARTED)</code> para não vazar. LiveData aparece em telas legadas ainda não migradas.'}
+    {t:'p',x:'<b>Cold vs hot</b>: um <code>Flow</code> frio re-executa o upstream a cada coletor; <code>StateFlow</code>/<code>SharedFlow</code> são hot e multicast (uma execução, vários coletores). Transforme frio em hot com <code>stateIn</code>/<code>shareIn</code>.'},
+    {t:'real',x:'Padrão moderno no SuperApp: o ViewModel expõe um <code>StateFlow</code> de estado + um <code>SharedFlow</code> de eventos; a UI coleta com <code>repeatOnLifecycle(STARTED)</code> (ou <code>collectAsStateWithLifecycle</code> no Compose) para não vazar em background. LiveData aparece só nas telas legadas ainda não migradas.'},
+    {t:'h',x:'Coleções: List vs Sequence'},
+    {t:'p',x:'Operações de coleção (<code>map</code>, <code>filter</code>) são <b>eager</b>: cada passo cria uma lista intermediária. Para cadeias longas ou grandes, <code>asSequence()</code> processa <b>lazy</b>, elemento a elemento, sem materializar intermediárias — menos alocação. Para coleções pequenas, a lista eager é mais simples e rápida (sem overhead da sequência).'}
   ],
   quiz:[
     {type:'trap',q:'Qual é o risco de usar <code>!!</code> em vez de <code>?.</code> ou <code>?:</code>?',
@@ -798,35 +815,46 @@ const MODULES = [
   xp:65,
   lesson:[
     {t:'h',x:'Ciclo de vida & o que sobrevive'},
-    {t:'p',x:'<b>Config change</b> (rotação, tema, idioma) destrói e recria a Activity. O <b>ViewModel sobrevive</b> a config changes — mas <b>não</b> a <b>process death</b> (o SO mata o app em background). Para sobreviver a process death, use <code>SavedStateHandle</code> / <code>onSaveInstanceState</code> (dados pequenos e serializáveis).'},
-    {t:'cmp',head:['Mecanismo','Sobrevive a config change','Sobrevive a process death','Tamanho'],rows:[
-      ['<b>ViewModel</b>','Sim','Não','Objetos em memória'],
-      ['<b>SavedStateHandle</b> / onSaveInstanceState','Sim','Sim','Pequeno (Bundle/Parcelable)'],
-      ['<b>Room/DataStore</b>','Sim','Sim (persistente)','Grande / durável']
+    {t:'p',x:'<b>Config change</b> (rotação, tema, idioma, tamanho de janela) destrói e recria a Activity. A <b>process death</b> é diferente: o SO mata o app em background para liberar memória e o recria depois. Saber o que sobrevive a cada um é a pergunta clássica.'},
+    {t:'cmp',head:['Mecanismo','Config change','Process death','Tamanho'],rows:[
+      ['<b>ViewModel</b>','Sobrevive','<b>Não</b> sobrevive','Objetos em memória'],
+      ['<b>SavedStateHandle</b> / onSaveInstanceState','Sobrevive','Sobrevive','Pequeno (Bundle/Parcelable)'],
+      ['<b>Room / DataStore</b>','Sobrevive','Sobrevive (persistente)','Grande / durável']
     ]},
-    {t:'h',x:'Jetpack Compose vs XML Views'},
+    {t:'call',title:'A regra prática',x:'Estado grande e vivo (objetos) → <b>ViewModel</b>. Estado pequeno que precisa voltar após process death (id selecionado, texto digitado) → <b>SavedStateHandle</b>. Dado durável → <b>Room/DataStore</b>. Em Fragment, observe UI usando <code>viewLifecycleOwner</code>, não o <code>this</code> do Fragment — senão você vaza a view.'},
+    {t:'h',x:'Os quatro componentes & Intents'},
+    {t:'key',x:['<b>Activity</b> — uma tela/host de UI. <b>Fragment</b> — porção de UI reutilizável dentro de uma Activity.','<b>Service</b> — trabalho sem UI (hoje quase sempre foreground service ou WorkManager).','<b>BroadcastReceiver</b> — reage a eventos do sistema/app. <b>ContentProvider</b> — expõe dados entre apps.','<b>Intent</b> — mensagem que inicia componentes; <b>explícita</b> (classe alvo) ou <b>implícita</b> (ação + dados, resolvida por quem sabe atender).']},
+    {t:'h',x:'Arquitetura em camadas (Clean-ish)'},
+    {t:'p',x:'A arquitetura recomendada separa responsabilidades em camadas, com dependências apontando para dentro (a UI conhece o domínio, o domínio não conhece a UI).'},
+    {t:'cmp',head:['Camada','Responsabilidade','Peças'],rows:[
+      ['<b>UI</b>','Renderizar estado e emitir eventos','Compose/Views + ViewModel'],
+      ['<b>Domain</b> (opcional)','Regra de negócio pura, testável','Use cases / interactors'],
+      ['<b>Data</b>','De onde vêm os dados; fonte única da verdade','Repository + Room + Retrofit']
+    ]},
+    {t:'key',x:['O <b>Repository</b> é a <b>fonte única da verdade</b>: decide entre cache local (Room) e rede (Retrofit) e expõe <code>Flow</code>.','<b>DI</b> (Hilt/Koin) injeta as dependências entre camadas — testabilidade e desacoplamento.','Regra de ouro: dependências apontam para o <b>domínio</b>; ele não importa Android.']},
+    {t:'h',x:'MVVM vs MVI vs MVP'},
+    {t:'cmp',head:['','MVP','MVVM','MVI'],rows:[
+      ['Estado','No Presenter/View','Vários observáveis no VM','<b>Um</b> State imutável único'],
+      ['Fluxo','Presenter chama a View','VM expõe dados observáveis','UDF: Intent → reducer → novo State'],
+      ['Previsibilidade','Média','Boa','Alta (estado reconstruível, replay)'],
+      ['Cerimônia','Média (interfaces View)','Menor','Maior (boilerplate de reducer)']
+    ]},
+    {t:'code',x:'<span class="cm">// MVI: Intent -> reducer -> novo State imutável; a UI só observa</span>\n<span class="kw">data class</span> State(<span class="kw">val</span> loading: Boolean = <span class="kw">false</span>, <span class="kw">val</span> itens: List&lt;Fatura&gt; = emptyList(), <span class="kw">val</span> erro: String? = <span class="kw">null</span>)\n<span class="kw">sealed interface</span> Intent { <span class="kw">data object</span> Carregar : Intent }\n<span class="kw">fun</span> reduce(s: State, i: Intent): State = <span class="kw">when</span> (i) {\n  Intent.Carregar -&gt; s.copy(loading = <span class="kw">true</span>)\n}'},
+    {t:'h',x:'UDF & state hoisting'},
+    {t:'p',x:'<b>Unidirectional Data Flow</b>: <b>estado desce, eventos sobem</b>. O <b>state hoisting</b> aplica isso na UI — suba o estado para o pai e passe <code>value</code> + <code>onValueChange</code> para o filho, tornando o composable <b>stateless</b>, reutilizável e testável. É o que torna a UI previsível: existe um único dono de cada pedaço de estado.'},
+    {t:'h',x:'Compose vs XML Views'},
     {t:'cmp',head:['','XML Views','Jetpack Compose'],rows:[
       ['Paradigma','Imperativo (você muta a view)','Declarativo (UI = função do estado)'],
       ['Atualização','<code>findViewById</code> + setters','Recomposition automática'],
-      ['Estado','Espalhado na view','<code>remember</code> + <code>state</code>, hoisting'],
+      ['Estado','Espalhado na view','<code>remember</code> + state, hoisting'],
       ['Boilerplate','Alto','Baixo'],
-      ['Interop','—','Convive via <code>ComposeView</code>/<code>AndroidView</code>']
+      ['Interop','—','Convive via <code>ComposeView</code> / <code>AndroidView</code>']
     ]},
-    {t:'p',x:'<b>Recomposition</b>: quando o estado muda, o Compose re-executa os composables afetados. Para não recompor à toa, use <b>tipos estáveis</b>, <code>remember</code> para não recalcular, <b>keys</b> em listas, e <code>derivedStateOf</code> para estado derivado.'},
-    {t:'h',x:'State hoisting & UDF'},
-    {t:'p',x:'<b>State hoisting</b>: suba o estado para o pai e passe <code>value</code> + <code>onValueChange</code> para baixo → composable sem estado, reutilizável e testável. Isso realiza o <b>Unidirectional Data Flow</b>: <b>estado desce, eventos sobem</b>.'},
-    {t:'h',x:'MVVM vs MVI'},
-    {t:'code',x:'<span class="cm">// MVI: estado único imutável + fluxo unidirecional</span>\n<span class="kw">sealed interface</span> UiState {\n  <span class="kw">data object</span> Loading : UiState\n  <span class="kw">data class</span> Ok(<span class="kw">val</span> itens: List&lt;Fatura&gt;) : UiState\n  <span class="kw">data class</span> Error(<span class="kw">val</span> msg: String?) : UiState\n}\n<span class="cm">// a UI só observa state e reage; eventos sobem, estado desce</span>'},
-    {t:'cmp',head:['','MVVM','MVI'],rows:[
-      ['Estado','Vários observáveis expostos','<b>Um</b> estado imutável único'],
-      ['Fluxo','ViewModel expõe dados','UDF estrito: Intent → reducer → novo State'],
-      ['Previsibilidade','Boa','Alta (estado reconstruível, fácil de debugar/replay)'],
-      ['Cerimônia','Menor','Maior (mais boilerplate)'],
-      ['Combina com','LiveData/StateFlow','sealed + StateFlow']
-    ]},
-    {t:'p',x:'Camadas (Clean-ish): <b>UI</b> → <b>domain</b> (use cases) → <b>data</b> (repository). DI com <b>Hilt</b> ou Koin. Jetpack: Navigation, Room, WorkManager, Paging.'},
-    {t:'real',x:'Modernizar o SuperApp sem big-bang: migre tela a tela usando interop — <code>ComposeView</code> dentro de layout XML, ou <code>AndroidView</code> para embutir uma view legada no Compose. Você entrega o redesign de forma incremental, sem congelar o app numa reescrita gigante.'},
-    {t:'call',title:'Cuidado com LaunchedEffect',x:'<code>LaunchedEffect(key)</code> roda um efeito ligado à composição e re-executa se a key muda; <code>rememberCoroutineScope</code> dá um escopo para disparar corrotinas em <b>callbacks</b> (ex.: onClick). Usar o errado causa efeitos disparados fora de hora ou cancelados cedo.'}
+    {t:'p',x:'Compose é o padrão para o redesign; XML segue vivo no legado. Os dois <b>convivem</b> — e é isso que permite migrar sem parar o produto.'},
+    {t:'h',x:'Migração incremental (o redesign na prática)'},
+    {t:'real',x:'Modernizar o SuperApp sem big-bang: migre <b>tela a tela</b> via interop — <code>ComposeView</code> dentro de um layout XML, ou <code>AndroidView</code> para embutir uma view legada no Compose. Entrega-se o redesign incrementalmente, com testes de caracterização protegendo cada tela migrada. Reescrita big-bang é o anti-padrão de risco que a vaga (modernizar mantendo funcionalidades) quer evitar.'},
+    {t:'h',x:'O kit Jetpack que você vai citar'},
+    {t:'key',x:['<b>Navigation</b> — grafo de destinos, single-activity, deep links.','<b>Room</b> — persistência relacional; <b>DataStore</b> — chave-valor assíncrono.','<b>WorkManager</b> — trabalho garantido em background.','<b>Paging 3</b> — listas grandes paginadas; <b>Hilt</b> — injeção de dependência.']}
   ],
   quiz:[
     {type:'trap',q:'Um usuário roda a tela e depois o SO mata o app em background. Onde o estado precisa estar para sobreviver a <b>ambos</b> os casos?',
