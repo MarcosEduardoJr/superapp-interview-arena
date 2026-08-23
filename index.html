@@ -956,6 +956,7 @@ const MODULES = [
     {t:'h',x:'Modifier: a ordem importa'},
     {t:'p',x:'O <code>Modifier</code> é aplicado <b>na ordem</b> em que você encadeia. <code>Modifier.padding(16).background(Red)</code> deixa o padding <b>fora</b> do vermelho; <code>Modifier.background(Red).padding(16)</code> pinta o vermelho e depois afasta o conteúdo. Trocar a ordem muda o resultado visual e a área de clique.'},
     {t:'code',x:'<span class="cm">// ordem diferente = resultado diferente</span>\nModifier.padding(16.dp).background(Red)   <span class="cm">// padding FORA do vermelho</span>\nModifier.background(Red).padding(16.dp)   <span class="cm">// vermelho e depois afasta o conteúdo</span>'},
+    {t:'key',x:['Modifier é aplicado <b>na ordem</b> em que você encadeia.','<code>size</code> → <code>padding</code> → <code>background</code> → <code>clickable</code> costuma dar o esperado.','A ordem muda o visual <b>e</b> a área de clique (ripple).']},
     {t:'h',x:'CompositionLocal & performance real'},
     {t:'p',x:'<b>CompositionLocal</b> passa valores implicitamente pela árvore (tema, densidade) sem terem que descer por parâmetro em cada nível — bom para dados ambientais, ruim para dados que a tela realmente depende (esses devem ser explícitos).'},
     {t:'real',x:'Lista de faturas que "pisca" e perde o estado de expandido ao rolar? Quase sempre falta <code>key</code> no LazyColumn e o item não é estável. Corrige com key por id + modelo <code>@Immutable</code>. Meça recomposições no <b>Layout Inspector</b> e acelere o startup/scroll com <b>baseline profiles</b> — não otimize no chute.'}
@@ -999,6 +1000,7 @@ const MODULES = [
     {t:'h',x:'Escopos no Android'},
     {t:'key',x:['<code>viewModelScope</code> — cancela quando o ViewModel é limpo. O padrão para lógica de tela.','<code>lifecycleScope</code> — atrelado ao lifecycle da Activity/Fragment.','<code>rememberCoroutineScope()</code> — para disparar de callbacks no Compose.','<b>Evite <code>GlobalScope</code></b>: sem dono, vira leak e trabalho órfão — quebra a structured concurrency.']},
     {t:'p',x:'A regra: toda corrotina precisa de um <b>dono</b> (um escopo com ciclo de vida). É isso que garante o cancelamento automático quando a tela some — e o que <code>GlobalScope</code> quebra, virando leak.'},
+    {t:'code',x:'viewModelScope.launch { ... }   <span class="cm">// cancela ao limpar o ViewModel</span>\nlifecycleScope.launch {\n  repeatOnLifecycle(STARTED) { state.collect { render(it) } }\n}'},
     {t:'h',x:'Dispatchers & withContext'},
     {t:'p',x:'O <b>dispatcher</b> decide em qual thread/pool a corrotina roda. Troque de contexto com <code>withContext</code> — nunca bloqueie a Main.'},
     {t:'cmp',head:['Dispatcher','Para quê'],rows:[
@@ -1012,6 +1014,7 @@ const MODULES = [
     {t:'h',x:'Exceções: onde são pegas'},
     {t:'key',x:['<code>launch</code>: a exceção propaga; um <code>CoroutineExceptionHandler</code> na corrotina <b>raiz</b> pode tratá-la.','<code>async</code>: a exceção fica no <code>Deferred</code> e só estoura no <code>await()</code> — trate com try/catch em volta do await.','O handler <b>não</b> pega exceção de <code>async</code> filho — só de corrotinas raiz iniciadas com <code>launch</code>.','<code>CancellationException</code> é <b>normal</b>: nunca engula num catch genérico — re-lance.']},
     {t:'code',x:'<span class="kw">val</span> d = async { podeFalhar() }\n<span class="kw">try</span> { d.await() }            <span class="cm">// a exceção do async estoura AQUI</span>\n<span class="kw">catch</span> (e: Exception) { tratar(e) }'},
+    {t:'p',x:'Um <code>try/catch</code> em volta de um <code>coroutineScope</code> pega a falha dos filhos (Job normal); com <code>supervisorScope</code>, cada filho falha isolado e você trata por card.'},
     {t:'h',x:'Cancelamento cooperativo'},
     {t:'p',x:'Cancelamento não é forçado: o código precisa <b>cooperar</b>. Funções suspensas da lib já checam; código pesado e síncrono ignora o cancelamento até você checar explicitamente.'},
     {t:'code',x:'<span class="kw">suspend fun</span> processar(itens: List&lt;Item&gt;) {\n  itens.forEach {\n    ensureActive()          <span class="cm">// aborta se o escopo foi cancelado</span>\n    pesado(it)\n  }\n}\n<span class="cm">// limpeza que PRECISA rodar mesmo cancelado:</span>\nwithContext(NonCancellable) { fecharRecursos() }'},
@@ -1086,6 +1089,7 @@ const MODULES = [
     {t:'h',x:'Anatomia do Hilt'},
     {t:'key',x:['<code>@HiltAndroidApp</code> na Application inicia o grafo.','<code>@AndroidEntryPoint</code> em Activity/Fragment habilita a injeção.','<code>@Inject</code> no construtor marca o que o Hilt sabe criar; <code>@HiltViewModel</code> para ViewModels.','<code>@Module @InstallIn(componente)</code> ensina o Hilt a fornecer o que ele não consegue construir sozinho.']},
     {t:'code',x:'<span class="kw">@HiltAndroidApp class</span> App : Application()\n\n<span class="kw">@AndroidEntryPoint class</span> HomeActivity : ComponentActivity()\n\n<span class="kw">@HiltViewModel class</span> HomeVM <span class="kw">@Inject</span> constructor(repo: Repo) : ViewModel()'},
+    {t:'p',x:'Regra: anote o construtor com <code>@Inject</code> quando o Hilt consegue construir a classe; use <code>@Module</code> só para o que ele não consegue (interfaces e libs externas).'},
     {t:'h',x:'@Binds vs @Provides'},
     {t:'code',x:'<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">abstract class</span> DataModule {\n  <span class="kw">@Binds</span>  <span class="cm">// interface -&gt; impl, método abstrato sem corpo</span>\n  <span class="kw">abstract fun</span> repo(impl: UserRepositoryImpl): UserRepository\n}\n\n<span class="kw">@Module</span> <span class="kw">@InstallIn</span>(SingletonComponent::class)\n<span class="kw">object</span> NetModule {\n  <span class="kw">@Provides</span>  <span class="cm">// precisa construir -&gt; @Provides com corpo</span>\n  <span class="kw">fun</span> ok(): OkHttpClient = OkHttpClient.Builder().build()\n}'},
     {t:'key',x:['<code>@Binds</code> — liga <b>interface → impl</b> que o Hilt já sabe instanciar; abstrato, sem corpo, mais eficiente.','<code>@Provides</code> — quando você precisa <b>construir</b> o objeto (lib externa via builder, com parâmetros).']},
@@ -1136,6 +1140,7 @@ const MODULES = [
     {t:'h',x:'Compose Navigation'},
     {t:'code',x:'NavHost(nav, startDestination = <span class="cm">"lista"</span>) {\n  composable(<span class="cm">"lista"</span>) {\n    Lista(onItem = { id -&gt; nav.navigate(<span class="cm">"fatura/$id"</span>) })\n  }\n  composable(<span class="cm">"fatura/{id}"</span>) { back -&gt;\n    <span class="kw">val</span> id = back.arguments?.getString(<span class="cm">"id"</span>)  <span class="cm">// passa id, não o objeto</span>\n    FaturaTela(id)\n  }\n}'},
     {t:'key',x:['<code>NavHost(navController, startDestination)</code> define o grafo; <code>composable("rota")</code> registra cada destino.','<code>navigate("rota")</code> empilha; <code>popBackStack()</code> desempilha.','O <code>hiltViewModel()</code> num destino tem escopo <b>daquele destino</b> no back stack.']},
+    {t:'p',x:'<code>navController.navigate</code> empilha; <code>popBackStack</code> desempilha. O <code>NavBackStackEntry</code> dá escopo próprio de ViewModel e estado salvo a cada destino.'},
     {t:'h',x:'Argumentos: passe id, não objeto'},
     {t:'call',title:'Regra de ouro',x:'Passe <b>ids</b>, não objetos. Argumentos vão para um Bundle (tamanho limitado — risco de <code>TransactionTooLarge</code> — e precisam ser serializáveis) e acoplam as telas ao modelo. O destino recebe o <code>id</code> e carrega os dados na própria fonte (repository/ViewModel).'},
     {t:'p',x:'Fluxo correto: a lista navega com <code>navigate("detalhe/$id")</code>; a tela de detalhe lê o <code>id</code> e pede os dados ao seu ViewModel/repository. O objeto nunca viaja pela rota.'},
@@ -1264,6 +1269,7 @@ const MODULES = [
     {t:'h',x:'Cache HTTP & offline-first'},
     {t:'key',x:['OkHttp faz <b>cache HTTP</b> (respeita <code>Cache-Control</code>/ETag) — menos rede, leitura offline.','Padrão robusto: <b>offline-first</b> com <b>Room como fonte da verdade</b>; a rede só atualiza o cache, e a UI observa o banco.','Defina <b>timeouts</b> (connect/read/write) explicitamente — o default pode ser longo demais.']},
     {t:'p',x:'Offline-first inverte a dependência: a tela lê do <b>Room</b> (sempre responde) e a rede só sincroniza o cache em segundo plano. O usuário nunca fica preso esperando a rede.'},
+    {t:'p',x:'ETag/If-None-Match economiza banda: o servidor responde <b>304 Not Modified</b> e o app reusa o cache. Configure também um cache de fallback para leitura quando estiver offline.'},
     {t:'h',x:'Resiliência: retry e refresh de token'},
     {t:'real',x:'Token expira e todo request volta 401? Um <b>Authenticator</b> do OkHttp renova o token e <b>repete</b> a chamada uma vez — transparente para o usuário. Para falhas transitórias, retry com <b>backoff</b> (não em loop infinito). E toda chamada é <b>HTTPS</b>; dados sensíveis pedem <b>certificate pinning</b> (ver módulo de Segurança).'},
     {t:'key',x:['<b>Authenticator</b> renova o token no 401 e repete a chamada uma vez.','Retry com <b>backoff</b> em falha transitória — nunca em loop.','HTTPS sempre; dado sensível pede certificate pinning.']}
@@ -1306,6 +1312,7 @@ const MODULES = [
       ['Enquanto a tela/app está viva','Coroutine em <code>viewModelScope</code>']
     ]},
     {t:'p',x:'A escolha errada = bug garantido: WorkManager para o que <b>não pode se perder</b>; foreground service para o <b>contínuo e visível</b>; AlarmManager para <b>horário exato</b>; coroutine só enquanto a tela vive.'},
+    {t:'key',x:['Garantido/deferível → WorkManager.','Contínuo/visível agora → Foreground Service.','Horário exato → AlarmManager; enquanto a tela vive → coroutine.']},
     {t:'h',x:'WorkManager — trabalho garantido'},
     {t:'code',x:'<span class="kw">class</span> UploadWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {\n  <span class="kw">override suspend fun</span> doWork(): Result =\n    <span class="kw">if</span> (enviarComprovante()) Result.success() <span class="kw">else</span> Result.retry()\n}\n\n<span class="kw">val</span> req = OneTimeWorkRequestBuilder&lt;UploadWorker&gt;()\n  .setConstraints(Constraints(requiredNetworkType = NetworkType.CONNECTED))\n  .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, SECONDS)\n  .build()\nWorkManager.getInstance(ctx).enqueue(req)'},
     {t:'key',x:['Garante execução mesmo após fechar o app ou reiniciar o device; escolhe o mecanismo por baixo conforme a versão do Android.','<b>Constraints</b>: só com rede, só carregando, só com bateria/armazenamento ok.','<b>Chaining</b> (encadear), <b>periodic</b> (mínimo 15 min), <b>unique work</b> (não duplicar), <b>backoff</b> em falha.']},
@@ -1348,6 +1355,7 @@ const MODULES = [
     {t:'h',x:'Frame budget: de onde vem o jank'},
     {t:'p',x:'A 60fps você tem <b>~16,6ms por frame</b> (a 120fps, ~8,3ms). Estourou o orçamento, o frame é perdido (<b>jank</b>). A causa quase sempre é trabalho pesado na <b>Main thread</b>: I/O, parse de JSON, layout caro, <b>overdraw</b> (pintar o mesmo pixel várias vezes) e <b>alocação</b> que dispara GC. Meça, não chute.'},
     {t:'key',x:['60fps → ~16,6ms por frame; 120fps → ~8,3ms.','Estourou = frame perdido = travada visível.','Causa comum: trabalho na Main (I/O, parse, layout caro, overdraw, alocação/GC).']},
+    {t:'code',x:'<span class="cm">// Macrobenchmark mede jank de forma reproduzível</span>\nbenchmarkRule.measureRepeated(metrics = listOf(FrameTimingMetric())) { ... }'},
     {t:'h',x:'Startup: cold, warm, hot'},
     {t:'p',x:'<b>Cold start</b> (processo criado do zero) é o pior caso e o que a Play mede. Reduza-o: adie inicialização pesada (use a <b>App Startup</b> lib para ordenar/lazy), evite trabalho no <code>Application.onCreate</code>, e use a <b>Splash Screen API</b> em vez de uma Activity de splash falsa.'},
     {t:'cmp',head:['Tipo','O que já existe ao abrir'],rows:[
@@ -1362,6 +1370,7 @@ const MODULES = [
     {t:'h',x:'Memória & GC'},
     {t:'key',x:['<b>Bitmaps</b> são os maiores vilões de memória — carregue no tamanho certo (Coil/Glide fazem isso).','Alocação em <b>hot paths</b> (scroll, recomposição) dispara GC e causa jank — reuse objetos.','<b>OutOfMemory</b> costuma ser leak acumulado, não "app grande": investigue com o Memory Profiler (heap dump).']},
     {t:'p',x:'Regra: não alocar em <b>hot paths</b> (scroll, recomposição) e carregar bitmaps no tamanho da tela. OOM raramente é "app grande" — é leak acumulado; confirme com um heap dump no Memory Profiler.'},
+    {t:'code',x:'<span class="cm">// StrictMode pega I/O e rede na Main em debug</span>\nStrictMode.setThreadPolicy(ThreadPolicy.Builder().detectAll().penaltyLog().build())'},
     {t:'h',x:'R8: shrink, obfuscate, optimize'},
     {t:'code',x:'<span class="cm"># proguard-rules.pro — manter o usado por reflexão/serialização</span>\n-keep class com.superapp.model.** { *; }\n-keepclassmembers class ** {\n  <span class="kw">@com.google.gson.annotations.SerializedName</span> &lt;fields&gt;;\n}\n<span class="cm"># sem keep rules, a classe quebra SÓ no release ofuscado</span>'},
     {t:'cmp',head:['','ProGuard','R8'],rows:[
@@ -1375,7 +1384,8 @@ const MODULES = [
     {t:'key',x:['Compila AOT os caminhos quentes (startup, primeira rolagem) — corta o custo do JIT.','O ganho aparece já na <b>primeira</b> execução do usuário.','Gere a partir de um teste Macrobenchmark das jornadas críticas e meça antes/depois.']},
     {t:'h',x:'Ferramentas de medição'},
     {t:'key',x:['<b>Macrobenchmark</b> — mede startup e scroll de forma reproduzível (a fonte de verdade).','<b>Perfetto / System Trace</b> — timeline detalhada de threads e frames.','<b>Profiler</b> (CPU/Memory) e <b>Layout Inspector</b> (contagem de recomposição no Compose).']},
-    {t:'real',x:'App abre devagar e a primeira rolagem trava? Baseline profile das jornadas críticas (splash → home → lista) + medir no Macrobenchmark. E LeakCanary: um <code>Context</code> de Activity preso num singleton de rede é campeão de leak no mundo real.'}
+    {t:'real',x:'App abre devagar e a primeira rolagem trava? Baseline profile das jornadas críticas (splash → home → lista) + medir no Macrobenchmark. E LeakCanary: um <code>Context</code> de Activity preso num singleton de rede é campeão de leak no mundo real.'},
+    {t:'p',x:'Regra de ouro: <b>meça antes de otimizar</b>. Um "acho que está lento" sem trace vira otimização no lugar errado — o gargalo raramente é onde a intuição aponta.'}
   ],
   quiz:[
     {type:'trap',q:'Qual destes é um <b>memory leak</b> clássico no Android?',
@@ -1424,6 +1434,7 @@ const MODULES = [
     ]},
     {t:'p',x:'Migrar de KAPT para KSP costuma cortar bastante do tempo de build em projetos com Room/Hilt/Moshi — todos já suportam KSP.'},
     {t:'key',x:['KAPT gera stubs Java para rodar processadores Java-based — lento.','KSP entende Kotlin nativamente, sem stubs — build bem mais rápido.','Room, Hilt, Moshi e Glide já têm processador KSP.']},
+    {t:'p',x:'Na migração, troque o plugin (<code>kotlin-kapt</code> → <code>com.google.devtools.ksp</code>) e as declarações <code>kapt(...)</code> por <code>ksp(...)</code>.'},
     {t:'h',x:'Version catalog & convention plugins'},
     {t:'code',x:'<span class="cm"># libs.versions.toml — fonte única de versões</span>\n[versions]\nretrofit = <span class="cm">"2.11.0"</span>\n[libraries]\nretrofit = { module = <span class="cm">"com.squareup.retrofit2:retrofit"</span>, version.ref = <span class="cm">"retrofit"</span> }'},
     {t:'key',x:['<b>Version catalog</b> centraliza versões — sem números mágicos divergentes entre módulos.','<b>Convention plugins</b> (buildSrc / build-logic) tiram a config repetida de cada <code>build.gradle</code> — um único lugar define "o que é um módulo Android da casa".']},
@@ -1435,6 +1446,7 @@ const MODULES = [
     {t:'h',x:'Estrutura de módulos'},
     {t:'p',x:'Um padrão comum (estilo Now in Android): <code>:app</code> (monta tudo), <code>:feature:*</code> (telas/fluxos), <code>:core:*</code> (<code>designsystem</code>, <code>network</code>, <code>data</code>, <code>common</code>). Regra: <b>feature não depende de feature</b>; o compartilhado desce para <code>:core</code>. Evite dependências cíclicas.'},
     {t:'key',x:['<code>:app</code> monta tudo. <code>:feature:*</code> são telas/fluxos. <code>:core:*</code> são designsystem, network, data, common.','<b>Feature não depende de feature</b>; o compartilhado desce para <code>:core</code>.','Evite dependências cíclicas — o Gradle não compila e o acoplamento vira dívida.']},
+    {t:'code',x:'<span class="cm">// :feature depende do core, nunca de outra feature</span>\ndependencies { implementation(project(<span class="cm">":core:designsystem"</span>)) }'},
     {t:'h',x:'Build mais rápido'},
     {t:'key',x:['Ligue <b>configuration cache</b> e <b>build cache</b> do Gradle.','Prefira <code>implementation</code> a <code>api</code> (menos recompilação transitiva).','KSP no lugar de KAPT; evite trabalho pesado na fase de configuração.']},
     {t:'real',x:'No SuperApp, cada time é dono de um <code>:feature</code>; <code>:core:designsystem</code> e <code>:core:network</code> são compartilhados, ligados por <code>implementation</code> com contratos claros — mudança num feature não recompila os outros nem vaza detalhes internos.'},
@@ -1478,6 +1490,7 @@ const MODULES = [
     {t:'h',x:'Biometria'},
     {t:'p',x:'O <b>BiometricPrompt</b> é a API padrão. O padrão <b>forte</b> não confia no "sim/não" da UI: vincula uma chave do <b>Keystore</b> a um <code>CryptoObject</code> liberado só após a autenticação — assim a operação sensível só acontece com biometria de verdade, sem como falsear.'},
     {t:'key',x:['<code>BiometricPrompt</code> é a API unificada (digital, face).','O padrão forte vincula uma chave do Keystore a um <code>CryptoObject</code> liberado só após autenticar.','Assim a operação sensível não roda sem biometria de verdade — não dá para falsear o "sim".']},
+    {t:'code',x:'BiometricPrompt(activity, callback)\n  .authenticate(promptInfo, CryptoObject(cipher))\n<span class="cm">// a chave do Keystore só é liberada após autenticar</span>'},
     {t:'h',x:'Armazenamento & componentes expostos'},
     {t:'key',x:['<b>Scoped storage</b>: acesso restrito; use o <b>Storage Access Framework</b> para arquivos do usuário.','Marque componentes <code>android:exported="false"</code> se não devem ser chamados por outros apps; valide toda Intent recebida.','Permissões em <b>runtime</b>: peça o mínimo, no momento do uso, e trate a negação.']},
     {t:'p',x:'Toda Intent recebida é <b>entrada não-confiável</b>: valide extras e origem. Componente que não deve ser chamado por outros apps vai com <code>android:exported="false"</code>.'},
@@ -1657,6 +1670,7 @@ const MODULES = [
     {t:'h',x:'Como o TalkBack navega'},
     {t:'p',x:'O usuário do TalkBack varre a tela por <b>swipe</b> (próximo/anterior) ou pula por <b>headings</b>. Por isso <b>ordem de foco</b> lógica, <b>headings</b> nas seções e <b>roles</b> corretos (botão, checkbox) são o que torna a tela navegável — não basta "ter contentDescription". Anúncios dinâmicos (ex.: "3 itens no carrinho") usam <code>liveRegion</code>.'},
     {t:'key',x:['Swipe → próximo/anterior; ou pula por <b>headings</b>.','<b>Ordem de foco</b> lógica + <b>roles</b> corretos = tela navegável.','Anúncios dinâmicos (ex.: "3 itens no carrinho") usam <code>liveRegion</code>.']},
+    {t:'code',x:'Modifier.semantics {\n  heading()                            <span class="cm">// vira ponto de navegação</span>\n  liveRegion = LiveRegionMode.Polite   <span class="cm">// anuncia mudança dinâmica</span>\n}'},
     {t:'h',x:'Testando acessibilidade'},
     {t:'key',x:['<b>Accessibility Scanner</b> (app do Google) aponta contraste, alvos pequenos e labels faltando.','<b>Compose UI Test</b> por semântica (<code>onNodeWithContentDescription</code>) testa a11y junto com a função.','Nada substitui <b>usar com TalkBack</b> ligado e checar contraste também no <b>dark mode</b>.']},
     {t:'real',x:'No redesign, erro de formulário marcado <b>só</b> em vermelho reprova 1.4.1: adicione ícone + texto ("CPF inválido") e associe a mensagem ao campo (3.3.1). Cabeçalhos ganham <code>heading()</code>; e o contraste dos novos tokens de cor é revisado nos dois temas.'}
@@ -1831,6 +1845,7 @@ const MODULES = [
       ['<b>Integração</b>','Média','Componentes juntos (DAO, repo)','Alguns'],
       ['<b>E2E / UI</b>','Lenta','App inteiro / device','Poucos']
     ]},
+    {t:'p',x:'O anti-padrão é o <b>cone de sorvete</b>: muitos E2E lentos e frágeis, poucos unitários. Uma suíte assim fica lenta, flaky, e ninguém confia — matando o valor do CI.'},
     {t:'h',x:'O que testar em cada nível (Android)'},
     {t:'key',x:['<b>Unitário</b>: ViewModel, use cases, mappers, lógica de domínio — na JVM, sem Android.','<b>Integração</b>: DAO do Room (banco em memória), repository (rede fake + cache), serialização.','<b>UI</b>: Compose UI Test / Espresso para fluxos críticos (login, checkout).']},
     {t:'p',x:'A intuição: teste a <b>lógica</b> na base (rápido, muitos), integração no meio, e só os <b>fluxos críticos</b> no topo (login, checkout) com UI test — que é lento e frágil.'},
@@ -1851,6 +1866,7 @@ const MODULES = [
     {t:'h',x:'Testando coroutines & Flow'},
     {t:'p',x:'Nunca dependa de <code>Dispatchers.Main</code> direto: <b>injete o dispatcher</b>. No teste, um <code>TestDispatcher</code> com <code>runTest</code> controla o <b>tempo virtual</b> — determinístico, sem flaky de timing (<code>StandardTestDispatcher</code> enfileira; <code>UnconfinedTestDispatcher</code> roda eager).'},
     {t:'code',x:'<span class="kw">@Test</span> <span class="kw">fun</span> emiteEstados() = runTest {\n  <span class="kw">val</span> vm = FaturasVM(FakeRepo(), StandardTestDispatcher())\n  vm.state.test {                 <span class="cm">// Turbine observa o Flow</span>\n    assertEquals(Loading, awaitItem())\n    vm.carregar()\n    assertTrue(awaitItem() <span class="kw">is</span> Ok)\n  }\n}'},
+    {t:'p',x:'<code>StandardTestDispatcher</code> enfileira (avance o tempo com <code>advanceUntilIdle()</code>); <code>UnconfinedTestDispatcher</code> executa eager. Turbine coleta e afirma cada emissão do Flow.'},
     {t:'h',x:'Test doubles — mock × fake × stub × spy'},
     {t:'cmp',head:['Double','O que é'],rows:[
       ['<b>Stub</b>','Retorna respostas fixas pré-programadas (sem lógica)'],
@@ -1937,6 +1953,7 @@ const MODULES = [
     {t:'h',x:'Estimativa, métricas, DoD & DoR'},
     {t:'key',x:['<b>Story points</b> (planning poker) medem esforço/complexidade relativa, não horas.','<b>Velocity</b> (Scrum) e <b>lead/cycle time</b> (Kanban) são para o time se planejar — não para cobrar indivíduos.','<b>DoR</b> (Definition of Ready) = pronto para <b>entrar</b>; <b>DoD</b> (Definition of Done) = pronto para <b>sair</b>; <b>critério de aceite</b> = comportamento específico da história.']},
     {t:'p',x:'Métrica é para o <b>time se planejar</b>, não para cobrar indivíduo. Comparar velocity entre times é uso errado — cada time estima na sua régua.'},
+    {t:'p',x:'<b>Planning poker</b>: o time estima junto (Fibonacci) e discute as divergências — o valor não é o número, é o alinhamento que a conversa gera.'},
     {t:'h',x:'O que a vaga pede: comunicação, autonomia, resiliência'},
     {t:'key',x:['<b>Comunicação</b>: expor bloqueio cedo, escrever MR/spec claros, alinhar com times multidisciplinares (design, backend, QA).','<b>Autonomia</b>: destravar sozinho, decidir com dados, pedir ajuda no momento certo — não sumir nem travar.','<b>Resiliência</b>: manter qualidade sob pressão (release travado, requisito mudou) e aprender com o erro.']},
     {t:'p',x:'A parte técnica abre a porta; o comportamental fecha o contrato. Prepare <b>casos concretos</b> de cada uma dessas competências — não adjetivos.'},
