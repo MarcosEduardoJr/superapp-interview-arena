@@ -382,6 +382,29 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
   table.cmp td:not(:first-child)[data-label=""]::before{content:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* MODO ENTREVISTA */
+.boss.iv{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 13%,var(--surface)),var(--surface));border-color:color-mix(in srgb,var(--accent) 32%,var(--border))}
+.boss.iv .ivtag{color:var(--accent-ink)}
+.boss.iv .bossbest b{color:var(--accent-ink)}
+.btn.ivbtn{background:var(--accent);color:#04140f;border-color:transparent}
+.btn.ivbtn:hover{filter:brightness(1.06);color:#04140f}
+.chip.ivchip{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.ivtools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 0}
+.ivstatus{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--accent-ink)}
+.ivtx{margin:12px 0 0;padding:12px 14px;border-radius:12px;background:var(--surface-3);border:1px dashed var(--border);font-size:14px;color:var(--text-dim);white-space:pre-wrap;min-height:20px}
+.ivtx[hidden]{display:none}
+.btn.ivreveal{margin-top:16px}
+.ivmodel{margin-top:16px;padding:18px 20px;border-radius:14px;background:color-mix(in srgb,var(--accent) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 26%,var(--border))}
+.ivmodel[hidden]{display:none}
+.ivmh{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--accent-ink);font-size:14px;margin-bottom:10px}
+.ivmh svg{width:1.15em;height:1.15em}
+.ivmodel ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:7px}
+.ivmodel li{font-size:14.5px;line-height:1.55;color:var(--text)}
+.ivrate{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.ivrate .ivrl{font-size:13px;color:var(--text-dim);margin-right:2px}
+.btn.rate.good{border-color:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--accent-ink)}
+.btn.rate.bad{border-color:color-mix(in srgb,var(--gold) 45%,transparent);color:var(--gold)}
+.ivtally{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:14px 0 4px;font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--text-dim)}
 </style>
 
 <div class="topbar">
@@ -459,6 +482,15 @@ footer.foot .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:
     <div class="qscore"><span>✓ <b id="scOk">0</b></span><span class="wr">✕ <span id="scNo">0</span></span></div>
   </div>
   <div id="qStage"></div>
+</div></div>
+
+<div id="interview" class="view"><div class="wrap">
+  <div class="backbar" id="ivBack"></div>
+  <div class="quizhead">
+    <div class="qprog"><div class="bar"><i id="ivBar"></i></div><div class="lbl" id="ivProgLbl"></div></div>
+    <div class="qscore"><span>👍 <b id="ivGood">0</b></span><span class="wr">📖 <span id="ivRev">0</span></span></div>
+  </div>
+  <div id="ivStage"></div>
 </div></div>
 
 <div id="catalog" class="view"><div class="wrap">
@@ -2049,10 +2081,55 @@ const MODULES = [
 ]; /*__END_MODULES__*/
 
 /* =================================================================
+   BANCO DE PERGUNTAS ABERTAS — Modo Entrevista
+   t = id do módulo (ou "soft" p/ comportamental). model = tópicos que
+   uma boa resposta sênior cobre (auto-avaliação, não gabarito fechado).
+   ================================================================= */
+const INTERVIEW = [
+  {t:'ia',q:'Explique a diferença entre um <b>agente</b>, um <b>workflow determinístico</b> e um <b>copiloto</b>. Quando você escolheria cada um num fluxo de desenvolvimento?',model:['Agente: o LLM dirige o loop e decide quais ferramentas chamar — caminho não é fixo.','Workflow: código orquestra passos fixos (LLM só preenche lacunas) — previsível, barato, testável.','Copiloto: sugere/autocompleta, humano no comando o tempo todo.','Escolha: workflow quando os passos são conhecidos; agente quando o caminho é incerto e vale o custo/risco.']},
+  {t:'ia',q:'Como você tornaria um agente de código <b>confiável</b> o suficiente para abrir Pull Requests sozinho no SuperApp?',model:['Tratar a saída como PR não-confiável: sempre passa por review humano + CI.','Gates de CI como autoridade final: build, testes, lint, cobertura, Sonar.','Evals automatizados medindo taxa de acerto antes de soltar em produção.','Observabilidade: tracing de cada passo/ferramenta para depurar.','Human-in-the-loop obrigatório em ações irreversíveis (merge, deploy, migration).']},
+  {t:'ia',q:'O que é <b>prompt injection</b> e como você defende um agente que lê issues do Jira e páginas web?',model:['Conteúdo vindo de ferramenta/web é DADO, não instrução — nunca executar comandos que apareçam nele.','Menor privilégio: o agente só tem as tools estritamente necessárias.','Sandbox + validação da saída antes de qualquer efeito colateral.','Nunca auto-aprovar ação sensível; defesa em profundidade (várias camadas).','Isolar/aspar o conteúdo não-confiável no contexto e sinalizar sua origem.']},
+  {t:'ia',q:'Seu agente entrou em <b>loop</b> e queimou muitos tokens numa tarefa. Como você diagnostica e corrige?',model:['Critério de parada: teto de iterações + budget de tokens por tarefa.','Detecção de não-progresso (mesma ação repetida) → abortar e escalar para humano.','Context engineering: podar o histórico, resumir, evitar reenviar tudo a cada passo.','Prompt caching e model routing para cortar custo do que é repetido/simples.']},
+  {t:'ia',q:'O que é <b>RAG</b> e quando ele resolve melhor um problema do que só aumentar o prompt?',model:['RAG injeta no contexto apenas os trechos relevantes recuperados de uma base — não a base inteira.','Embeddings vetorizam a consulta e os documentos; busca por similaridade + reranking.','Ganha quando a base é grande/muda muito e não cabe (ou custa caro) no contexto.','Pipeline maduro cita a fonte e faz chunking; reduz alucinação vs prompt gigante.']},
+  {t:'sdd',q:'O que é <b>Spec-Driven Development</b> e por que ele importa ainda mais na era dos agentes?',model:['A especificação é a fonte da verdade, versionada — descreve o QUÊ e o PORQUÊ, não o COMO.','Critérios de aceite verificáveis reduzem ambiguidade e viram testes.','Com agentes: dá alvo objetivo, permite regenerar código e garante rastreabilidade.','Contraste com vibe coding: sem spec, o agente adivinha e você não sabe se acertou.']},
+  {t:'sdd',q:'O que faz uma <b>boa spec</b>? Dê exemplo de um critério de aceite bom e um ruim.',model:['Testável, não-ambíguo e mensurável; inclui não-objetivos (o que está fora de escopo).','Formato Given/When/Then ajuda a virar teste automatizado.','Ruim: "o app deve ser rápido". Bom: "primeiro frame renderiza em até 1s em cold start no aparelho X".']},
+  {t:'claude',q:'Explique <b>Skill</b>, <b>MCP</b>, <b>Subagent</b> e <b>Hook</b>, e quando usar cada um.',model:['Skill: empacota conhecimento/procedimento repetível (um playbook que o agente carrega).','MCP: protocolo aberto que conecta o agente a ferramentas/dados externos.','Subagent: isola contexto e permite paralelizar tarefas independentes.','Hook: código determinístico que sempre roda em certos eventos (ex.: lint no pre-commit).']},
+  {t:'claude',q:'O que é o <b>MCP</b> (Model Context Protocol) e que problema de integração ele resolve?',model:['Protocolo padrão para o agente acessar tools, resources e prompts de sistemas externos.','É o "USB-C" das integrações: evita reescrever N conectores para M agentes (problema N×M).','Transportes stdio (local) e HTTP/SSE (remoto); credenciais ficam do lado do servidor.']},
+  {t:'android',q:'O que sobrevive a <b>configuration change</b> versus <b>process death</b>, e onde você guarda cada tipo de estado?',model:['ViewModel sobrevive a config change (rotação), mas NÃO a process death.','SavedStateHandle / rememberSaveable: estado pequeno que precisa sobreviver a process death.','Room/DataStore: estado durável de verdade.','Regra: nunca dependa só do ViewModel para dados que não podem se perder.']},
+  {t:'android',q:'Explique <b>MVVM</b> vs <b>MVI</b> e quando você escolheria MVI.',model:['MVI: estado único imutável + fluxo unidirecional (UDF) — previsível, fácil de testar e reproduzir bug.','Custo do MVI: mais cerimônia/boilerplate (intents, reducer).','MVVM: menos boilerplate, mas estado pode espalhar em vários LiveData/StateFlow.','MVI brilha em telas complexas com muitos estados; MVVM basta no simples.']},
+  {t:'android',q:'Como você modernizaria o app de <b>XML/Views para Compose</b> sem parar as entregas?',model:['Migração incremental via interop: ComposeView dentro de tela XML, AndroidView dentro de Compose.','Priorizar telas de menor risco / maior tráfego primeiro; nada de big-bang.','Testes de caracterização antes de mexer, para não regredir comportamento.','Design system compartilhado para não ter dois visuais divergindo.']},
+  {t:'kotlin',q:'<b>StateFlow</b> vs <b>SharedFlow</b> vs <b>LiveData</b> — quando usar cada um?',model:['StateFlow: estado atual sempre disponível (tem valor inicial) — ideal para UI state.','SharedFlow: eventos one-shot (navegar, mostrar snackbar) sem valor "atual".','LiveData: legado, lifecycle-aware nativo; em Compose prefira StateFlow.','Coletar com collectAsStateWithLifecycle / repeatOnLifecycle para não vazar.']},
+  {t:'kotlin',q:'Explique <b>structured concurrency</b> e por que evitar <code>GlobalScope</code>.',model:['Todo coroutine roda num escopo com Job pai; cancelar o pai cancela os filhos — sem leak.','GlobalScope não tem dono: a coroutine vira órfã, sobrevive à tela e vaza.','No Android use viewModelScope / lifecycleScope, que cancelam sozinhos no fim do ciclo.']},
+  {t:'compose',q:'Sua <code>LazyColumn</code> pisca e perde o estado ao rolar. Como você diagnostica?',model:['Falta key estável nos itens (key = { it.id }) — o Compose confunde posições.','Itens instáveis forçam recomposição; anotar modelos com @Immutable/@Stable.','Medir recomposições no Layout Inspector para achar o culpado.','Estado que precisa sobreviver ao scroll deve estar acima do item (hoisting) ou rememberSaveable.']},
+  {t:'compose',q:'Explique as <b>fases do Compose</b> e como funciona a recomposição.',model:['Três fases: Composition (o quê), Layout (onde/tamanho), Drawing (desenho).','Recompõe apenas quem lê o estado que mudou — não a tela inteira.','Composables devem ser puros, sem efeito colateral, e podem rodar fora de ordem / em paralelo.','Estabilidade dos parâmetros define se um composable é skippable.']},
+  {t:'coroutines',q:'O campo de busca mostra o resultado de uma query <b>antiga</b> (race condition). Como você resolve?',model:['flatMapLatest: ao chegar novo termo, cancela a busca anterior automaticamente.','debounce para não disparar a cada tecla; distinctUntilChanged para ignorar repetição.','flowOn(Dispatchers.IO) para o trabalho pesado; a race se resolve na origem do fluxo.']},
+  {t:'coroutines',q:'Como você testa um <b>StateFlow/Flow</b> de forma determinística, sem <code>Thread.sleep</code>?',model:['Injetar o dispatcher (nunca hardcode Dispatchers.IO no ViewModel).','runTest + TestDispatcher: tempo virtual, avança com advanceUntilIdle().','Turbine para coletar e afirmar cada emissão do Flow em ordem.']},
+  {t:'quality',q:'Explique a <b>pirâmide de testes</b> e o que você testaria em cada nível num app Android.',model:['Base larga: muitos testes unitários (ViewModel, use cases, domínio) — rápidos e estáveis.','Meio: integração (DAO com Room in-memory, repositório).','Topo estreito: poucos testes de UI/E2E cobrindo fluxos críticos.','Anti-padrão cone de sorvete (muito E2E) deixa a suíte lenta e flaky.']},
+  {t:'quality',q:'<b>Mock</b> vs <b>fake</b> vs <b>stub</b> — e quando você prefere um fake?',model:['Stub: devolve respostas fixas pré-programadas.','Mock: verifica interações (foi chamado com X, N vezes) — pode acoplar ao "como".','Fake: implementação real simplificada (ex.: repositório em memória).','Prefiro fake para testar comportamento: sobrevive a refactor sem reescrever o teste.']},
+  {t:'network',q:'Como você estruturaria uma arquitetura <b>offline-first</b> no SuperApp?',model:['Room como fonte única da verdade; a UI observa Flow do banco, não da rede.','A rede sincroniza e alimenta o cache; app funciona mesmo offline.','Estratégia de conflito/refresh definida (ex.: stale-while-revalidate, ETag/304).','WorkManager para sincronização garantida em background.']},
+  {t:'aws',q:'Como um app mobile acessa recursos <b>AWS</b> com segurança, sem chave fixa no APK?',model:['Cognito User Pool autentica o usuário; Identity Pool troca por credenciais TEMPORÁRIAS via STS.','IAM com menor privilégio: cada credencial só faz o que precisa.','Nunca embutir Access Key/Secret no APK — é extraível por engenharia reversa.','Tokens curtos + refresh; segredos sensíveis ficam no backend.']},
+  {t:'perf',q:'O app <b>abre devagar</b> e a primeira rolagem trava. O que você investiga e faz?',model:['Medir antes de otimizar: Macrobenchmark (startup/jank) e Profiler — não chutar.','Cold start: enxugar Application.onCreate, usar App Startup, adiar init pesado.','Baseline Profiles para pré-compilar caminhos quentes.','Jank: trabalho na Main thread, layouts profundos, alocação em scroll; StrictMode em debug.','Leaks com LeakCanary (Activity/Context retidos).']},
+  {t:'security',q:'Onde você guarda um <b>token de sessão</b> no Android e por quê?',model:['EncryptedSharedPreferences (ou DataStore criptografado) com chave no Android Keystore.','Nunca em SharedPreferences em texto plano nem hardcoded no código.','TLS + certificate pinning para o transporte.','Idealmente o segredo forte vive no backend; o app guarda só o token de curta duração.']},
+  {t:'build',q:'Explique <code>implementation</code> vs <code>api</code> no Gradle e o impacto no build.',model:['implementation: a dependência é encapsulada — só o módulo dono a enxerga; muda ela, recompila só ele.','api: vaza a dependência transitivamente para quem consome o módulo — recompila a cadeia.','Padrão é implementation: reduz acoplamento e tempo de build incremental.','api só quando o tipo aparece na API pública do módulo.']},
+  {t:'devops',q:'Descreva um <b>pipeline de CI/CD</b> de app Android e o papel do <b>quality gate</b>.',model:['Etapas: build → testes → análise (detekt/Sonar) → empacota AAB → deploy por track.','Quality gate (Sonar) barra o merge se cobertura/bugs/smells do código novo passarem do limite.','Filosofia clean as you code: mede o código que mudou, não a dívida histórica inteira.','Segredos (keystore, tokens) em variáveis protegidas do CI, nunca no repositório.']},
+  {t:'wcag',q:'Como você garante <b>WCAG 2.1 AA</b> numa tela em Compose?',model:['Contraste mínimo 4.5:1 para texto normal (3:1 para texto grande).','Não passar informação só por cor (critério 1.4.1).','contentDescription em imagens informativas; null nas decorativas para o TalkBack pular.','semantics: heading(), roles, estados; área de toque de ~48dp.','Testar com TalkBack e Accessibility Scanner; alvo de 44px é AAA, não AA (pegadinha).']},
+  {t:'multirepo',q:'<b>Multi-repo</b> vs <b>mono-repo</b> — quais os trade-offs?',model:['Multi-repo: autonomia e isolamento por time; mudança atômica cross-repo é difícil; exige versionar/publicar artefatos (semver).','Mono-repo: mudança atômica e refactor global fáceis; menos autonomia, tooling de build mais pesado.','Escolha depende de tamanho do time, acoplamento entre módulos e maturidade de CI.']},
+  {t:'java',q:'Quais métodos <b>HTTP são idempotentes</b> e por que isso importa no app?',model:['GET, PUT, DELETE são idempotentes; POST não é.','Idempotência guia retries seguros: pode repetir PUT/DELETE sem duplicar efeito.','Para POST com retry, use uma chave de idempotência para o servidor deduplicar.']},
+  {t:'di',q:'<b>Hilt/Dagger</b> vs <b>Koin</b> — qual a diferença fundamental?',model:['Hilt/Dagger: injeção resolvida em compile-time, sem reflexão — erro de grafo quebra o build (mais seguro).','Koin: service locator em runtime via DSL — erro só aparece ao resolver a dependência.','Trade-off: segurança/perf de build vs simplicidade e curva de aprendizado.']},
+  {t:'nav',q:'Por que na navegação você deveria passar um <b>id</b> e não o <b>objeto</b> inteiro?',model:['Argumentos vão para um Bundle (tamanho limitado, precisa ser serializável) — objeto grande estoura TransactionTooLarge.','Passar o objeto acopla as telas e duplica a fonte da verdade.','Passe o id e deixe o destino buscar os dados do repositório (fonte única).']},
+  {t:'soft',q:'Conte sobre um <b>cenário adverso</b> que você virou (resiliência).',model:['Use STAR: Situação, Tarefa, Ação (na 1ª pessoa: o que VOCÊ fez), Resultado mensurável.','Escolha um caso real com obstáculo concreto (prazo, incidente, legado).','Feche com número/impacto: "reduzi X%", "estabilizei o pipeline", "zerei os flaky".']},
+  {t:'soft',q:'Fale de um <b>conflito técnico</b> no time e como você resolveu.',model:['STAR; foco no problema, não na pessoa.','Escutar o outro lado, trazer dados/benchmark em vez de opinião.','Decisão com trade-off documentado (ADR); alinhar e seguir mesmo discordando (disagree and commit).']},
+  {t:'soft',q:'Conte um <b>erro seu em produção</b> — o que aconteceu e o que você aprendeu?',model:['STAR; assumir o erro sem terceirizar a culpa.','Como você mitigou/corrigiu rápido (rollback, hotfix).','Postmortem sem culpados + ação de prevenção (teste, gate, alerta) para não repetir.']},
+  {t:'soft',q:'Como você <b>prioriza</b> quando tudo é urgente e o prazo aperta?',model:['Negociar escopo com PO/stakeholder: o que é MVP de verdade.','Comunicar trade-off e risco cedo, não na véspera.','Cortar o não-essencial, entregar valor incremental; transparência > herói silencioso.']},
+  {t:'soft',q:'Qual o <b>objetivo real da daily</b>? E o que ela NÃO é?',model:['É o time se sincronizar e replanejar o dia rumo à meta da sprint, e levantar impedimentos.','Não é relatório de status para o gestor.','Impedimento vira ação com dono; discussão longa sai para depois (parking lot).']},
+  {t:'agile',q:'O time vive <b>estourando a sprint</b>. Como você atacaria isso como sênior?',model:['Olhar métricas: velocity real vs planejada, quebras de escopo no meio.','Melhorar estimativa (planning poker, quebrar histórias grandes), respeitar a DoR.','Reforçar Definition of Done para não empurrar dívida; discutir na retrospectiva.','Proteger o time de escopo injetado no meio da sprint.']}
+];
+
+/* =================================================================
    ESTADO / PERSISTÊNCIA
    ================================================================= */
 const LS_KEY='sia_v2';
-const DEFAULT={xp:0, lessons:{}, quiz:{}, boss:{}, sub:{}, vagas:[], activeVaga:null, seeded:false};
+const DEFAULT={xp:0, lessons:{}, quiz:{}, boss:{}, iv:{}, sub:{}, vagas:[], activeVaga:null, seeded:false};
 function uid(){return 'v'+Math.random().toString(36).slice(2,7)+Date.now().toString(36).slice(-3);}
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -2231,7 +2308,14 @@ function renderHome(){
       '<p>'+bossCount(v)+' questões sorteadas de todos os assuntos, embaralhadas e sem gabarito na cara. Aprovação: <b>70%</b>. Faça depois de estudar os assuntos.</p></div>'+
     '<div class="bossR">'+(bb?'<div class="bossbest">Seu recorde: <b>'+bb.best+'/'+bb.total+'</b></div>':'<div class="bossbest">Ainda não prestada</div>')+
       '<button class="btn gold big" '+(ts.length?'':'disabled ')+'onclick="startBoss(\''+v.id+'\')">'+svg('<path d="M6 3l14 9-14 9z"/>')+'Iniciar prova final</button></div>'+
-    '</div>';
+    '</div>'+
+    (function(){var ivb=(S.iv&&S.iv[v.id]),n=ivCount(v);return '<div class="boss iv">'+
+      '<div class="bossL"><div class="bosstag ivtag">'+svg(IMIC)+'MODO ENTREVISTA</div>'+
+        '<h3>Simulação com perguntas abertas</h3>'+
+        '<p>'+n+' perguntas abertas (técnicas + comportamentais) sorteadas da vaga. <b>Ouça</b> a pergunta, responda <b>em voz alta</b> e confira a <b>resposta-modelo</b>. Treina o que o quiz não pega: explicar de boca.</p></div>'+
+      '<div class="bossR">'+(ivb?'<div class="bossbest">Melhor sessão: <b>'+ivb.good+'/'+ivb.total+'</b> mandou bem</div>':'<div class="bossbest">Ainda não treinada</div>')+
+        '<button class="btn big ivbtn" '+(n?'':'disabled ')+'onclick="startInterview(\''+v.id+'\')">'+svg(IMIC)+'Iniciar entrevista</button></div>'+
+    '</div>';})();
   const g=$('#grid'); g.innerHTML='';
   if(!ts.length){g.innerHTML='<p class="dim" style="grid-column:1/-1">Nenhum assunto nesta vaga. Clique em <b>Editar assuntos</b> para escolher do banco.</p>';}
   ts.forEach(function(m,i){var el=document.createElement('div');el.className='card'+(moduleProgress(m).pct>=100?' done':'');el.innerHTML=topicCard(m,i);g.appendChild(el);});
@@ -2453,6 +2537,95 @@ function finish(){
   if(activeVaga())renderHome(); else renderCatalog();
   window.scrollTo(0,0);
 }
+
+/* =================================================================
+   MODO ENTREVISTA — perguntas abertas + TTS + microfone opcional
+   ================================================================= */
+var IMIC='<path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4M8 22h8"/>';
+var IMICOFF='<path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4M8 22h8"/><path d="M2 2l20 20"/>';
+var IV={qs:[],i:0,good:0,mid:0,bad:0,vaga:null,rec:null,recOn:false,rated:false};
+function ivPool(v){var ids={};vagaTopics(v).forEach(function(t){ids[t.id]=1;});return INTERVIEW.filter(function(q){return q.t==='soft'||ids[q.t];});}
+function ivCount(v){return Math.min(ivPool(v).length,12);}
+function ivArea(t){if(t==='soft')return 'Comportamental';var m=getTopic(t);return m?m.title:t;}
+function ivSpeechSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
+function startInterview(vid){
+  var v=getVaga(vid);if(!v)return;var pool=ivPool(v);if(!pool.length){toast('Vaga sem perguntas');return;}
+  pool=shuffle(pool.slice());
+  var soft=pool.filter(function(q){return q.t==='soft';}),tech=pool.filter(function(q){return q.t!=='soft';});
+  var picked=tech.slice(0,10).concat(soft.slice(0,2));picked=shuffle(picked);if(picked.length>12)picked=picked.slice(0,12);
+  IV={qs:picked,i:0,good:0,mid:0,bad:0,vaga:v,rec:null,recOn:false,rated:false};gReturn='home';
+  $('#ivBack').innerHTML=backBtn("ivQuit()",'Sair da entrevista')+'<span class="chip ivchip">'+svg(IMIC)+' Entrevista · '+esc(v.name)+'</span>';
+  go('interview');window.scrollTo(0,0);renderIQ();
+}
+function ivQuit(){ivRecStop();ttsStop();backHome();}
+function renderIQ(){
+  ivRecStop();var q=IV.qs[IV.i],total=IV.qs.length;IV.rated=false;
+  $('#ivBar').style.width=Math.round(IV.i/total*100)+'%';
+  $('#ivProgLbl').textContent='Pergunta '+(IV.i+1)+' de '+total;
+  $('#ivGood').textContent=IV.good;$('#ivRev').textContent=IV.bad;
+  var mic=ivSpeechSupported()?'<button class="btn ghost" id="ivMic" type="button">'+svg(IMIC)+'Gravar resposta</button>':'';
+  $('#ivStage').innerHTML='<div class="qcard ivcard">'+
+    '<div class="qtop"><span class="qtype '+(q.t==='soft'?'case':'cmp')+'">'+svg('<path d="M12 2 2 7l10 5 10-5z"/>',1.8)+ivArea(q.t)+'</span></div>'+
+    '<div class="qtext">'+q.q+'</div>'+
+    '<div class="ivtools"><button class="btn" id="ivHear" type="button">'+svg(ISPK)+'Ouvir pergunta</button>'+mic+'<span class="ivstatus" id="ivStatus"></span></div>'+
+    (ivSpeechSupported()?'<div class="ivtx" id="ivTx" hidden></div>':'')+
+    '<button class="btn primary ivreveal" id="ivReveal" type="button">'+svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>')+'Ver resposta modelo</button>'+
+    '<div class="ivmodel" id="ivModel" hidden><div class="ivmh">'+svg('<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="m8 12 3 3 5-6"/>')+'Resposta modelo — um bom sênior cobre:</div>'+
+      '<ul>'+q.model.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ul>'+
+      '<div class="ivrate"><span class="ivrl">Como você foi?</span>'+
+        '<button class="btn rate good" type="button" onclick="ivRate(\'good\')">👍 Mandei bem</button>'+
+        '<button class="btn rate mid" type="button" onclick="ivRate(\'mid\')">🤏 Mais ou menos</button>'+
+        '<button class="btn rate bad" type="button" onclick="ivRate(\'bad\')">📖 Preciso revisar</button></div></div>'+
+  '</div>';
+  $('#ivHear').onclick=function(){var b=$('#ivHear');if(TTS.playing){ttsStop();b.innerHTML=svg(ISPK)+'Ouvir pergunta';return;}ttsSpeak(stripTags(q.q),function(st){if(st==='end'||st==='stop')b.innerHTML=svg(ISPK)+'Ouvir pergunta';});b.innerHTML=svg(ISTOP)+'Parar';};
+  var mb=$('#ivMic');if(mb)mb.onclick=ivRecToggle;
+  $('#ivReveal').onclick=ivReveal;
+  window.scrollTo(0,0);
+}
+function ivReveal(){var m=$('#ivModel'),r=$('#ivReveal');if(m)m.hidden=false;if(r)r.style.display='none';}
+function ivRate(kind){
+  if(IV.rated)return;IV.rated=true;ivRecStop();
+  if(kind==='good')IV.good++;else if(kind==='mid')IV.mid++;else IV.bad++;
+  if(kind==='good'){S.xp+=15;save();updateHUD();}
+  $('#ivGood').textContent=IV.good;$('#ivRev').textContent=IV.bad;
+  var last=IV.i>=IV.qs.length-1;
+  var rr=document.querySelector('#ivModel .ivrate');
+  if(rr)rr.innerHTML='<span class="ivrl">'+(kind==='good'?'Boa! +15 XP':kind==='mid'?'Anotado — revise os pontos acima.':'Sem problema — volte na aula depois.')+'</span>'+
+    '<button class="btn primary" type="button" onclick="ivAdvance()">'+(last?'Ver resumo':'Próxima pergunta')+' '+svg('<path d="m9 18 6-6-6-6"/>')+'</button>';
+}
+function ivAdvance(){if(IV.i>=IV.qs.length-1)finishInterview();else{IV.i++;renderIQ();}}
+function finishInterview(){
+  ivRecStop();ttsStop();var total=IV.qs.length,good=IV.good,mid=IV.mid,bad=IV.bad;
+  var prev=S.iv[IV.vaga.id],best=!prev||good>prev.good;if(best)S.iv[IV.vaga.id]={good:good,total:total};save();
+  var pct=Math.round(good/total*100);
+  var medal=pct>=80?'🎤':pct>=50?'📈':'🌱';
+  var title=pct>=80?'Pronto para a entrevista!':pct>=50?'No caminho certo':'Precisa de mais ensaio';
+  var msg=pct>=80?'Você explicou a maioria com segurança. Revise as que marcou como "revisar" e mantenha o ritmo.':pct>=50?'Metade saiu bem. Volte nas aulas dos temas que travaram e refaça — falar em voz alta fixa o conteúdo.':'Muita coisa travou na hora de explicar. Estude os assuntos e refaça: saber não é o mesmo que saber explicar.';
+  $('#ivStage').innerHTML='<div class="result">'+
+    '<div class="medal">'+medal+'</div><h2>'+title+'</h2>'+
+    '<div class="big">'+good+'<small>/'+total+'</small></div>'+
+    '<p>'+msg+'</p>'+
+    '<div class="ivtally"><span>👍 '+good+' mandei bem</span><span>🤏 '+mid+' mais ou menos</span><span>📖 '+bad+' revisar</span></div>'+
+    (best?'<div class="xpgain">'+svg('<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>')+'Melhor sessão de entrevista desta vaga':'')+(best?'</div>':'')+
+    '<div class="actions"><button class="btn" type="button" onclick="startInterview(\''+IV.vaga.id+'\')">'+svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>')+'Nova rodada</button>'+
+      '<button class="btn primary" type="button" onclick="backHome()">Voltar à trilha '+svg('<path d="m9 18 6-6-6-6"/>')+'</button></div></div>';
+  $('#ivBar').style.width='100%';$('#ivProgLbl').textContent='Concluído';
+  renderHome();window.scrollTo(0,0);
+}
+/* microfone opcional (Web Speech Recognition) — degrada em silêncio se indisponível */
+function ivRecToggle(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+  if(IV.recOn){ivRecStop();return;}
+  var r;try{r=new SR();}catch(e){return;}
+  r.lang='pt-BR';r.continuous=true;r.interimResults=true;var fin='';
+  var tx=$('#ivTx');if(tx){tx.hidden=false;tx.textContent='…';}
+  r.onresult=function(e){var itm='';for(var k=e.resultIndex;k<e.results.length;k++){if(e.results[k].isFinal)fin+=e.results[k][0].transcript;else itm+=e.results[k][0].transcript;}if(tx)tx.textContent=(fin+itm).trim()||'…';};
+  r.onerror=function(ev){var st=$('#ivStatus');if(st)st.textContent=(ev&&ev.error==='not-allowed')?'Microfone bloqueado — libere a permissão do navegador.':'';ivRecStop();};
+  r.onend=function(){IV.recOn=false;var mb=$('#ivMic');if(mb)mb.innerHTML=svg(IMIC)+'Gravar resposta';var st=$('#ivStatus');if(st&&st.textContent==='Ouvindo…')st.textContent='';};
+  IV.rec=r;IV.recOn=true;try{r.start();}catch(e){IV.recOn=false;return;}
+  var mb=$('#ivMic');if(mb)mb.innerHTML=svg(IMICOFF)+'Parar';var st=$('#ivStatus');if(st)st.textContent='Ouvindo…';
+}
+function ivRecStop(){if(IV.rec&&IV.recOn){try{IV.rec.stop();}catch(e){}}IV.recOn=false;var mb=$('#ivMic');if(mb)mb.innerHTML=svg(IMIC)+'Gravar resposta';}
 
 /* =================================================================
    NAV / UTIL
