@@ -598,30 +598,43 @@ const MODULES = [
   chips:['Spec = fonte da verdade','vs TDD/BDD','Spec Kit','Rastreabilidade'],
   kicker:'Módulo 02 · Metodologia',
   subtitle:'A vaga pede domínio em SDD. É a metodologia que faz o desenvolvimento agêntico escalar: em vez de prompts soltos, uma especificação versionada e revisável guia o que o agente constrói.',
-  xp:55,
+  xp:70,
   lesson:[
-    {t:'h',x:'O que é SDD'},
-    {t:'p',x:'Em <b>Spec-Driven Development</b>, a <b>especificação</b> — o quê e o porquê, com critérios de aceite — é o artefato central e a <b>fonte da verdade</b>. O código passa a ser uma <em>saída</em> derivada da spec (frequentemente gerada por um agente), não o documento primário.'},
-    {t:'key',x:['A spec descreve <b>comportamento, restrições e critérios de aceite</b> — o <b>QUÊ</b> e o <b>PORQUÊ</b>.','A implementação (a lib, o padrão, o algoritmo) é o <b>COMO</b> — decidido depois.','A spec é <b>versionada em git</b> e <b>revisada como código</b>, evitando drift entre intenção e implementação.']},
+    {t:'h',x:'O que é SDD e por que ele existe'},
+    {t:'p',x:'Em <b>Spec-Driven Development</b>, a <b>especificação</b> é o artefato central e a <b>fonte da verdade</b>: ela descreve o comportamento desejado, as restrições e os critérios de aceite. O código deixa de ser o documento primário e passa a ser uma <em>saída</em> derivada da spec — muitas vezes gerada por um agente.'},
+    {t:'p',x:'O problema que o SDD ataca: no desenvolvimento tradicional a <b>intenção</b> vive na cabeça das pessoas e some; o código vira a única verdade, mas ele diz <em>o que faz</em>, nunca <em>por que deveria fazer</em>. Com agentes de IA isso piora — a maior causa de saída errada é <b>subespecificação</b>. O SDD torna a intenção explícita, versionada e revisável.'},
+    {t:'key',x:['A spec descreve o <b>QUÊ</b> e o <b>PORQUÊ</b> (comportamento, regras, critérios de aceite).','A implementação — lib, padrão, algoritmo — é o <b>COMO</b>, decidido depois.','A spec é <b>versionada em git</b> e <b>revisada como código</b>, eliminando o drift entre intenção e implementação.']},
+    {t:'h',x:'Anatomia de uma spec que funciona'},
+    {t:'p',x:'Uma spec útil não é um textão: é estruturada e <b>verificável</b>. As seções que importam:'},
+    {t:'key',x:['<b>Contexto/objetivo</b> — que problema do usuário isto resolve.','<b>Requisitos</b> — o comportamento esperado, em linguagem clara.','<b>Critérios de aceite</b> — condições testáveis de "pronto".','<b>Não-objetivos</b> — o que fica explicitamente de fora (evita escopo infinito).','<b>Restrições & edge cases</b> — offline, erro de rede, process death, acessibilidade.']},
+    {t:'code',x:'<span class="cm"># spec.md — Login por PIN (fonte da verdade)</span>\n## Contexto\nAcesso rápido e seguro ao SuperApp sem digitar senha completa.\n## Requisitos\n- PIN de 6 dígitos, teclado numérico embaralhado a cada abertura.\n## Critérios de aceite\n- Dado 3 PINs inválidos, a conta bloqueia por 15 min.\n- O bloqueio persiste após reabrir o app (process death).\n- Uma mensagem explica o motivo e o tempo restante.\n## Não-objetivos\n- Biometria e recuperação de PIN por e-mail (fase 2).'},
+    {t:'call',title:'O que NÃO vai na spec',x:'Decisões de implementação (Room, Hilt, MVI, qual algoritmo). Se você escreve o <b>como</b> na spec, você amarra o agente cedo demais e perde a liberdade de o Plan escolher a melhor técnica.'},
+    {t:'h',x:'Critérios de aceite verificáveis — o coração do SDD'},
+    {t:'p',x:'Um critério de aceite só vale se for <b>testável, não-ambíguo e mensurável</b>. "A tela deve ser rápida" é lixo; "a home renderiza o primeiro frame em até 1s no dispositivo de referência" é verificável. O formato <b>Given/When/Then</b> força essa disciplina.'},
+    {t:'code',x:'<span class="cm"># criterio de aceite no formato Given/When/Then</span>\nCenário: bloqueio após tentativas\n  Dado que o usuário errou o PIN 2 vezes\n  Quando ele erra pela 3ª vez\n  Então a conta é bloqueada por 15 minutos\n  E a UI mostra o motivo e o tempo restante'},
+    {t:'key',x:['Cada critério vira, direto, um <b>teste de aceite</b> — e um caso do <b>eval</b> do agente.','Cobrir os <b>caminhos infelizes</b> (erro, offline, timeout) é o que separa spec sênior de spec ingênua.','Se você não consegue escrever o teste a partir do critério, o critério ainda está ambíguo.']},
+    {t:'h',x:'O fluxo: Specify → Plan → Tasks → Implement'},
+    {t:'p',x:'Ferramentas como o <b>GitHub Spec Kit</b> formalizam o SDD em fases, cada uma com um <b>gate humano</b> antes da próxima. A intenção sempre precede o técnico, que precede a execução.'},
+    {t:'cmp',head:['Fase','O que produz','Gate'],rows:[
+      ['<b>Specify</b>','Especificação: comportamento, requisitos, critérios de aceite','Revisão humana da spec'],
+      ['<b>Plan</b>','Decisões técnicas: arquitetura, stack, restrições (o COMO)','Revisão do plano'],
+      ['<b>Tasks</b>','Quebra em tarefas pequenas e verificáveis','Aprovação das tarefas'],
+      ['<b>Implement</b>','Agente/dev executa cada tarefa contra a spec','CI + review no MR']
+    ]},
+    {t:'call',title:'Por que faseado com gate',x:'Deixar o agente ir da intenção ao código de uma vez concentra todo o risco no fim. Fatiar em Specify→Plan→Tasks com aprovação humana entre as fases pega o erro barato (na spec) antes de virar erro caro (no código).'},
     {t:'h',x:'Por que SDD combina com agentes'},
-    {t:'p',x:'Agente sem intenção explícita alucina e retrabalha. A spec vira o “prompt de longo prazo”: não-ambígua, revisável, versionada. Se o requisito muda, você muda a spec e <b>regenera</b> a implementação — com rastreabilidade do requisito até o código.'},
-    {t:'h',x:'O fluxo (estilo GitHub Spec Kit)'},
-    {t:'code',x:'<span class="cm"># spec.md — a fonte da verdade (o QUÊ, não o COMO)</span>\n## Login por PIN\nCritérios de aceite:\n- Dado 3 PINs inválidos, a conta bloqueia por 15 min.\n- O bloqueio persiste se o app for reaberto.\nFora de escopo: biometria (fase 2).'},
-    {t:'cmp',head:['Fase','O que produz'],rows:[
-      ['<b>Specify</b>','A especificação: comportamento, requisitos, critérios de aceite'],
-      ['<b>Plan</b>','Decisões técnicas: arquitetura, stack, restrições (o “como”)'],
-      ['<b>Tasks</b>','Quebra em tarefas pequenas e verificáveis'],
-      ['<b>Implement</b>','Agente/dev executa as tarefas contra a spec']
-    ]},
+    {t:'p',x:'A spec é o <b>prompt de longo prazo</b> do agente: não-ambígua, versionada e revisável. Ela dá ao modelo um alvo estável e ao humano um ponto de controle. Como a intenção está registrada, mudou o requisito → você muda a <b>spec</b> e <b>regenera</b> a implementação, com <b>rastreabilidade</b> do requisito até o código (e o diff auditável).'},
+    {t:'real',x:'No redesign do SuperApp, cada jornada reorganizada vira uma spec: fluxos, estados, critérios de aceite e regras de acessibilidade (WCAG). O agente implementa contra ela; o time revisa a <b>spec</b> no MR — não só o diff. Muda a jornada → muda a spec → regenera. A spec vira, de quebra, a base dos testes de aceite e dos evals do agente.'},
     {t:'h',x:'SDD vs TDD vs BDD vs vibe coding'},
-    {t:'cmp',head:['','Ponto de partida','Foco'],rows:[
-      ['<b>SDD</b>','A especificação','Intenção completa (comportamento + arquitetura + tarefas) dirige a geração'],
-      ['<b>TDD</b>','Um teste que falha','Corretude no nível de unidade (red→green→refactor)'],
-      ['<b>BDD</b>','Comportamento em linguagem natural (Given/When/Then)','Colaboração e alinhamento de comportamento'],
-      ['<b>Vibe coding</b>','Um prompt solto','Nada versionado — não escala, não rastreia']
+    {t:'cmp',head:['','Ponto de partida','Foco','Nível'],rows:[
+      ['<b>SDD</b>','A especificação','Intenção completa (comportamento + arquitetura + tarefas) dirige a geração','Sistema/feature'],
+      ['<b>TDD</b>','Um teste que falha','Corretude de unidade (red → green → refactor)','Unidade'],
+      ['<b>BDD</b>','Comportamento em linguagem natural (Given/When/Then)','Alinhamento de comportamento entre negócio e dev','Feature'],
+      ['<b>Vibe coding</b>','Um prompt solto','Nada versionado — não escala, não rastreia','—']
     ]},
-    {t:'real',x:'No redesign do SuperApp, cada jornada reorganizada vira uma spec: fluxos, estados, critérios de aceite e regras de acessibilidade. O agente implementa contra ela; o time revisa a <b>spec</b> num MR, não só o diff. Muda a jornada → muda a spec → regenera.'},
-    {t:'call',title:'O erro comum',x:'Confundir SDD com “escrever muita documentação”. A spec de SDD é <b>executável/verificável</b> — tem critérios de aceite testáveis e vive no git. Doc morta em wiki não é SDD.'}
+    {t:'p',x:'Eles <b>não competem</b>: a spec do SDD é o alvo; os critérios de aceite viram testes (herdando o espírito de BDD/TDD). SDD opera num nível acima, orquestrando a geração; TDD garante a corretude fina de cada unidade que o agente escreve.'},
+    {t:'h',x:'Armadilhas & anti-padrões'},
+    {t:'call',title:'Os erros que reprovam na prática',x:'<b>Doc morta</b>: spec numa wiki que ninguém atualiza (não é SDD — SDD vive no git e é revisada). <b>Over-spec</b>: escrever o COMO e engessar a solução. <b>Critério não-verificável</b>: "deve ser intuitivo" não gera teste. <b>Spec desatualizada</b>: o código andou e a spec não — o drift volta. A spec é executável/verificável, não enfeite.'}
   ],
   quiz:[
     {type:'cmp',q:'Qual afirmação distingue melhor <b>SDD</b> de “vibe coding” (promptar o agente livremente)?',
@@ -653,24 +666,39 @@ const MODULES = [
   subtitle:'Requisito direto: “Conhecimentos em Claude Code, Skills e MCPs”. Entenda o que cada um é, e principalmente quando usar um em vez do outro — a distinção que cai na entrevista.',
   xp:60,
   lesson:[
-    {t:'h',x:'Claude Code'},
-    {t:'p',x:'CLI agêntico da Anthropic que roda no terminal (também em IDE, desktop e web). Ele lê e edita arquivos, roda comandos, usa ferramentas e opera em <b>loop agêntico</b> dentro do seu repositório. É o “agente que trabalha no seu código”.'},
+    {t:'h',x:'Claude Code — o agente no seu terminal'},
+    {t:'p',x:'<b>Claude Code</b> é o agente de codificação da Anthropic: roda no terminal (e em IDE, desktop e web), lê e edita arquivos, roda comandos e testes, e opera em <b>loop agêntico</b> dentro do seu repositório. É o exemplo concreto de <b>agente aplicado ao SDLC</b> — exatamente o que a vaga pede.'},
+    {t:'key',x:['Trabalha no <b>seu repo</b>: busca, edita, roda build/testes, abre commits/PRs.','Opera sob um <b>modo de permissão</b> — você controla o que ele pode executar (menor privilégio).','Extensível por <b>Skills</b>, <b>MCP</b>, <b>subagentes</b> e <b>hooks</b> — as quatro peças abaixo.']},
+    {t:'call',title:'A pegadinha das 4 peças',x:'Skill, MCP, Subagent e Hook resolvem coisas <b>diferentes</b>. Confundi-las é o erro nº1 nesta parte da entrevista. Guarde: Skill = <b>o que sabe fazer</b>; MCP = <b>o que consegue acessar</b>; Subagent = <b>onde isola trabalho</b>; Hook = <b>o que sempre acontece</b>.'},
     {t:'h',x:'Skills — conhecimento empacotado'},
-    {t:'code',x:'<span class="cm"># SKILL.md — a description é o que dispara a skill</span>\n---\nname: code-review-superapp\ndescription: Revisa PR contra o padrão do time (WCAG, testes, MVI)\n---\nPassos: 1) rode detekt  2) cheque acessibilidade  3) valide MVI\n\n<span class="cm">// .mcp.json — conecta o agente ao Jira/GitLab</span>\n{ <span class="cm">"mcpServers"</span>: { <span class="cm">"jira"</span>: { <span class="cm">"command"</span>: <span class="cm">"jira-mcp"</span> } } }'},
-    {t:'p',x:'Uma <b>Skill</b> empacota <b>instruções + scripts + recursos</b> num diretório com um <code>SKILL.md</code> (frontmatter <code>name</code> e <code>description</code>). O agente a carrega <b>sob demanda</b> — <b>progressive disclosure</b>: só entra no contexto quando é relevante, economizando tokens.'},
-    {t:'key',x:['A <b>description</b> é o que decide o <b>trigger</b> — se ela não descreve bem o caso de uso, a skill nunca dispara.','Serve para <b>procedimentos repetíveis</b>: padrão de PR do time, checklist de revisão WCAG, house style, passos de deploy.','É <b>conhecimento/como-fazer</b> carregado no próprio agente — não é um serviço externo.']},
+    {t:'p',x:'Uma <b>Skill</b> empacota <b>instruções + scripts + recursos</b> num diretório com um <code>SKILL.md</code> (frontmatter <code>name</code> e <code>description</code>). O agente a carrega <b>sob demanda</b> (<b>progressive disclosure</b>): ela só entra no contexto quando é relevante, mantendo o prompt enxuto.'},
+    {t:'code',x:'<span class="cm"># SKILL.md — a description decide QUANDO a skill dispara</span>\n---\nname: code-review-superapp\ndescription: Revisa PR do SuperApp contra o padrão do time (WCAG 2.1 AA, MVI, testes)\n---\n1. Rode detekt e ktlint.\n2. Cheque contentDescription e alvos de toque (48dp).\n3. Valide o fluxo unidirecional (estado desce, evento sobe).\n4. Exija teste para todo comportamento novo.'},
+    {t:'key',x:['A <b>description</b> é o <b>gatilho</b>: se ela não descreve bem o caso de uso, a skill nunca é acionada, por melhor que seja o conteúdo.','É <b>conhecimento/como-fazer</b> carregado no próprio agente — <b>não</b> é um serviço externo nem uma conexão.','Serve para <b>procedimentos repetíveis</b>: padrão de PR, checklist WCAG, house style, passos de release.']},
     {t:'h',x:'MCP — Model Context Protocol'},
-    {t:'p',x:'Protocolo <b>aberto</b> que conecta o modelo a <b>ferramentas e dados externos</b> via <b>servidores MCP</b>. É o “USB-C das integrações de IA”: em vez de código custom por integração, você fala um protocolo padrão. Um servidor MCP expõe <b>tools</b>, <b>resources</b> e <b>prompts</b>.'},
-    {t:'key',x:['<b>Transporte stdio</b> — servidor local, no seu processo/máquina.','<b>Transporte HTTP/SSE</b> — servidor remoto.','Padroniza integrar Jira, GitLab, bancos, etc., sem reinventar cada conexão.']},
-    {t:'h',x:'A distinção que cai na prova: Skill vs MCP vs Subagent vs Hook'},
-    {t:'cmp',head:['','O que é','Quando usar'],rows:[
-      ['<b>Skill</b>','Conhecimento/procedimento empacotado, carregado no contexto do agente','Codificar um padrão repetível do time (como fazer algo)'],
-      ['<b>MCP</b>','Conexão a um sistema externo via protocolo (servidor separado)','Dar ao agente acesso a uma ferramenta/dado de fora (Jira, GitLab, DB)'],
-      ['<b>Subagent</b>','Instância separada com seu próprio contexto','Isolar/paralelizar trabalho (ex.: busca ampla, revisão)'],
-      ['<b>Hook</b>','Automação determinística por evento, executada pelo harness','Garantir que algo <em>sempre</em> rode (lint/testes antes de commit)']
+    {t:'p',x:'O <b>MCP</b> é um protocolo <b>aberto</b> (JSON-RPC) que padroniza como um agente se conecta a <b>ferramentas e dados externos</b>, via <b>servidores MCP</b>. É o "USB-C das integrações de IA": em vez de escrever N×M integrações custom, você fala um protocolo único. Arquitetura: um <b>host</b> (o app de IA) roda <b>clients</b> que conectam a <b>servers</b>, e cada server expõe as capacidades de um sistema (Jira, GitLab, banco, filesystem).'},
+    {t:'cmp',head:['Primitiva do MCP','O que expõe'],rows:[
+      ['<b>Tools</b>','Ações executáveis (abrir MR, mover card, rodar query)'],
+      ['<b>Resources</b>','Dados/contexto legível (arquivo, registro, doc)'],
+      ['<b>Prompts</b>','Templates reutilizáveis de interação']
     ]},
-    {t:'real',x:'Time do SuperApp: uma <b>Skill</b> guarda o padrão de code review e as regras WCAG do produto; um <b>MCP</b> liga o agente ao Jira e ao GitLab; <b>subagentes</b> revisam módulos em paralelo; um <b>Hook</b> roda detekt + testes antes de cada commit do agente. Cada ferramenta no seu papel.'},
-    {t:'call',title:'Não confunda',x:'Skill = <b>o que o agente sabe fazer</b> (conhecimento no contexto). MCP = <b>o que o agente consegue acessar</b> (sistema externo via protocolo). Hook = <b>o que sempre acontece</b> (determinístico, não é o modelo decidindo).'}
+    {t:'code',x:'<span class="cm">// .mcp.json — conecta o agente ao Jira e ao GitLab</span>\n{\n  <span class="cm">"mcpServers"</span>: {\n    <span class="cm">"jira"</span>:   { <span class="cm">"command"</span>: <span class="cm">"jira-mcp"</span> },\n    <span class="cm">"gitlab"</span>: { <span class="cm">"command"</span>: <span class="cm">"gitlab-mcp"</span> }\n  }\n}'},
+    {t:'key',x:['<b>Transporte stdio</b> — servidor local, no seu processo/máquina.','<b>Transporte HTTP/SSE</b> — servidor remoto.','Ambos podem expor tools e resources; a escolha é <b>onde o servidor roda</b>, não o tipo de capacidade.']},
+    {t:'h',x:'Subagents — isolamento e paralelismo'},
+    {t:'p',x:'Um <b>subagente</b> é uma instância separada com o <b>seu próprio contexto</b>. Serve para <b>isolar</b> trabalho (uma busca ampla não polui o contexto principal) e <b>paralelizar</b> (vários subagentes atacam subtarefas independentes ao mesmo tempo), devolvendo só o resumo relevante ao orquestrador.'},
+    {t:'key',x:['Ganho: contexto limpo + paralelismo (ex.: revisar 5 módulos ao mesmo tempo).','Custo: mais tokens e coordenação — use quando a subtarefa é <b>genuinamente separável</b>.']},
+    {t:'h',x:'Hooks — automação determinística'},
+    {t:'p',x:'Um <b>hook</b> é uma automação <b>determinística</b> disparada por <b>evento</b> (antes de uma ferramenta, ao parar, antes de commit) e executada pelo <b>harness</b> — <b>não</b> pelo modelo decidindo. É como você garante que algo <em>sempre</em> aconteça, independentemente do que o agente "resolver" fazer.'},
+    {t:'key',x:['Uso clássico: rodar <code>detekt</code> + testes antes de cada commit do agente.','Como é determinístico, não depende do modelo lembrar — a máquina impõe a regra.']},
+    {t:'h',x:'A distinção que cai na prova'},
+    {t:'cmp',head:['','O que é','Decide/Garante','Quando usar'],rows:[
+      ['<b>Skill</b>','Procedimento empacotado no contexto do agente','O <b>como fazer</b>','Codificar um padrão repetível do time'],
+      ['<b>MCP</b>','Conexão a sistema externo via protocolo (server separado)','O <b>que acessar</b>','Dar acesso a Jira, GitLab, DB'],
+      ['<b>Subagent</b>','Instância com contexto próprio','<b>Onde isolar</b> trabalho','Busca ampla, revisão paralela'],
+      ['<b>Hook</b>','Automação determinística por evento (harness)','O <b>que sempre roda</b>','lint/testes antes de commit']
+    ]},
+    {t:'h',x:'Montando o fluxo agêntico do time'},
+    {t:'real',x:'Time do SuperApp: uma <b>Skill</b> guarda o padrão de code review e as regras WCAG; um <b>MCP</b> liga o agente ao <b>Jira</b> (ler/triar tickets) e ao <b>GitLab</b> (abrir MR, ver pipeline); <b>subagentes</b> revisam módulos em paralelo; um <b>Hook</b> roda detekt + testes antes de cada commit. Cada peça no seu papel — e o dev sênior orquestra o conjunto.'},
+    {t:'call',title:'Armadilhas',x:'<b>Description fraca</b> = skill que nunca dispara. <b>MCP com permissão ampla</b> (token que pode tudo) = risco de segurança — dê menor privilégio por servidor. Guardar procedimento do time num MCP (em vez de Skill), ou tentar "conectar ao Jira" com uma Skill, é trocar as peças.'}
   ],
   quiz:[
     {type:'cmp',q:'Você quer que o agente (a) siga o <b>padrão de code review do seu time</b> e (b) leia e comente <b>issues do Jira</b>. O que usar para cada um?',
