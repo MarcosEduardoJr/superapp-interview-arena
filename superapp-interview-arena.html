@@ -686,6 +686,7 @@ const MODULES = [
       ['<b>Implement</b>','Agente/dev executa cada tarefa contra a spec','CI + review no MR']
     ]},
     {t:'call',title:'Por que faseado com gate',x:'Deixar o agente ir da intenção ao código de uma vez concentra todo o risco no fim. Fatiar em Specify→Plan→Tasks com aprovação humana entre as fases pega o erro barato (na spec) antes de virar erro caro (no código).'},
+    {t:'code',x:'<span class="cm"># spec.md — Specify: o QUÊ + critérios de aceite (versionado = fonte da verdade)</span>\nfeature: Login com biometria\ncriterios_de_aceite:\n  - dado: usuário com biometria cadastrada\n    quando: abre o app\n    entao: pede digital e entra sem senha em até 2s\n  - dado: 3 falhas de biometria\n    entao: cai para PIN (fallback)\nnao_objetivos: [cadastro de biometria, recuperação de conta]\n<span class="cm"># Plan → Tasks → Implement derivam DAQUI; cada critério vira um teste</span>'},
     {t:'h',x:'Por que SDD combina com agentes'},
     {t:'p',x:'A spec é o <b>prompt de longo prazo</b> do agente: não-ambígua, versionada e revisável. Ela dá ao modelo um alvo estável e ao humano um ponto de controle. Como a intenção está registrada, mudou o requisito → você muda a <b>spec</b> e <b>regenera</b> a implementação, com <b>rastreabilidade</b> do requisito até o código (e o diff auditável).'},
     {t:'real',x:'No redesign do SuperApp, cada jornada reorganizada vira uma spec: fluxos, estados, critérios de aceite e regras de acessibilidade (WCAG). O agente implementa contra ela; o time revisa a <b>spec</b> no MR — não só o diff. Muda a jornada → muda a spec → regenera. A spec vira, de quebra, a base dos testes de aceite e dos evals do agente.'},
@@ -1535,7 +1536,8 @@ const MODULES = [
     {t:'h',x:'Build mais rápido'},
     {t:'key',x:['Ligue <b>configuration cache</b> e <b>build cache</b> do Gradle.','Prefira <code>implementation</code> a <code>api</code> (menos recompilação transitiva).','KSP no lugar de KAPT; evite trabalho pesado na fase de configuração.']},
     {t:'real',x:'No SuperApp, cada time é dono de um <code>:feature</code>; <code>:core:designsystem</code> e <code>:core:network</code> são compartilhados, ligados por <code>implementation</code> com contratos claros — mudança num feature não recompila os outros nem vaza detalhes internos.'},
-    {t:'p',x:'Sinais de build saudável: build incremental rápido, sem <code>api</code> desnecessário, KSP no lugar de KAPT e os caches do Gradle (configuration + build) ligados no CI.'}
+    {t:'p',x:'Sinais de build saudável: build incremental rápido, sem <code>api</code> desnecessário, KSP no lugar de KAPT e os caches do Gradle (configuration + build) ligados no CI.'},
+    {t:'code',x:'<span class="cm"># gradle.properties — acelera o build (ligue também no CI)</span>\norg.gradle.caching=true\norg.gradle.configuration-cache=true\norg.gradle.parallel=true\nkotlin.incremental=true\norg.gradle.jvmargs=-Xmx4g'}
   ],
   quiz:[
     {type:'cmp',q:'Diferença entre <code>implementation</code> e <code>api</code> no Gradle?',
@@ -1698,6 +1700,7 @@ const MODULES = [
     {t:'h',x:'SemVer & dependency hell'},
     {t:'p',x:'<b>Semantic Versioning</b> (<code>MAJOR.MINOR.PATCH</code>): MAJOR quebra compatibilidade, MINOR adiciona compatível, PATCH corrige. O <b>dependency hell</b> aparece quando dois módulos pedem versões transitivas conflitantes da mesma lib — resolva com <b>BOM</b> (platform) ou <code>resolutionStrategy</code>. Consumir por <b>versão fixa publicada</b> (não branch flutuante) evita o "funcionava ontem".'},
     {t:'key',x:['<b>MAJOR</b> quebra compatibilidade; <b>MINOR</b> adiciona compatível; <b>PATCH</b> corrige.','Conflito transitivo (dois módulos pedindo versões diferentes da mesma lib) → resolva com <b>BOM</b> ou <code>resolutionStrategy</code>.','Consuma por versão fixa publicada, nunca por branch flutuante.']},
+    {t:'code',x:'<span class="cm">// versão FIXA publicada, nunca branch flutuante (libs.versions.toml)</span>\n<span class="cm">// conflito transitivo (dois módulos pedindo versões diferentes) → force uma:</span>\nconfigurations.all {\n  resolutionStrategy { force(<span class="cm">"com.squareup.okhttp3:okhttp:4.12.0"</span>) }\n}\n<span class="cm">// ou um BOM (platform) alinha todas as libs de uma família:</span>\nimplementation(platform(<span class="cm">"com.squareup.okhttp3:okhttp-bom:4.12.0"</span>))'},
     {t:'h',x:'Contratos entre módulos'},
     {t:'key',x:['O módulo compartilhado tem uma <b>API pública</b> = contrato. Mudança incompatível → nova <b>MAJOR</b>, não um patch silencioso.','Use <b>deprecation</b> antes de remover: dá aos consumidores tempo de migrar.','Publique changelog; consumidores atualizam a versão <b>quando puderem</b>, não de surpresa.']},
     {t:'real',x:'SuperApp com múltiplos times: <code>designsystem</code> e <code>auth</code> compartilhados, cada um versionado e publicado no Artifactory; os apps consomem versões específicas via version catalog. Um breaking change vira 3.0.0; quem consome migra no seu tempo — sem quebrar 3 apps de uma vez.'},
@@ -1887,6 +1890,7 @@ const MODULES = [
       ['Manutenção','Menor (gerenciado/integrado)','Maior (servidor, plugins, atualizações)']
     ]},
     {t:'p',x:'Resumo: GitLab CI é tudo-em-um, YAML no repo, menos manutenção; Jenkins é servidor central, poderosíssimo via plugins, porém mais legado e custoso de manter.'},
+    {t:'code',x:'<span class="cm"># .gitlab-ci.yml — YAML versionado no repo, runner gerenciado</span>\ntest:\n  stage: test\n  script: ./gradlew test detekt\n\n<span class="cm">// Jenkinsfile — Groovy, servidor central + plugins</span>\npipeline { agent any\n  stages { stage(<span class="cm">"test"</span>) { steps { sh <span class="cm">"./gradlew test detekt"</span> } } } }'},
     {t:'h',x:'SonarQube & o Quality Gate'},
     {t:'code',x:'<span class="cm"># o pipeline barra o merge se o gate falhar (clean as you code)</span>\nsonar:\n  script:\n    - ./gradlew sonar -Dsonar.qualitygate.wait=true\n  <span class="cm"># falha o job se o código NOVO furar o limite do gate</span>\n\n<span class="cm"># o gate mede o DIFF, não a dívida histórica inteira. Ex. de limites:</span>\n<span class="cm"># bugs=0, vulnerabilidades=0, cobertura&gt;=80%, duplicação&lt;3%</span>'},
     {t:'p',x:'SonarQube faz <b>análise estática</b>: bugs, vulnerabilidades, <b>security hotspots</b>, code smells, duplicação e cobertura. O <b>Quality Gate</b> é um conjunto de condições que, se não atendidas, <b>bloqueia o merge</b>.'},
@@ -1957,6 +1961,7 @@ const MODULES = [
       ['<b>Espresso</b>','UI instrumentada (device)'],
       ['<b>Turbine</b>','Asserir emissões de Flow']
     ]},
+    {t:'code',x:'<span class="cm">// build.gradle.kts — as libs de teste que você cita na entrevista</span>\ntestImplementation(<span class="cm">"junit:junit:4.13.2"</span>)\ntestImplementation(<span class="cm">"io.mockk:mockk:1.13.8"</span>)            <span class="cm">// mock em Kotlin</span>\ntestImplementation(<span class="cm">"app.cash.turbine:turbine:1.0.0"</span>)   <span class="cm">// afirma emissões de Flow</span>\ntestImplementation(<span class="cm">"org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"</span>)\nandroidTestImplementation(<span class="cm">"androidx.compose.ui:ui-test-junit4"</span>) <span class="cm">// Compose UI Test</span>'},
     {t:'h',x:'Testando coroutines & Flow'},
     {t:'p',x:'Nunca dependa de <code>Dispatchers.Main</code> direto: <b>injete o dispatcher</b>. No teste, um <code>TestDispatcher</code> com <code>runTest</code> controla o <b>tempo virtual</b> — determinístico, sem flaky de timing (<code>StandardTestDispatcher</code> enfileira; <code>UnconfinedTestDispatcher</code> roda eager).'},
     {t:'code',x:'<span class="kw">@Test</span> <span class="kw">fun</span> emiteEstados() = runTest {\n  <span class="kw">val</span> vm = FaturasVM(FakeRepo(), StandardTestDispatcher())\n  vm.state.test {                 <span class="cm">// Turbine observa o Flow</span>\n    assertEquals(Loading, awaitItem())\n    vm.carregar()\n    assertTrue(awaitItem() <span class="kw">is</span> Ok)\n  }\n}'},
